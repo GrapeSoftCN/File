@@ -23,10 +23,14 @@ import org.json.simple.JSONObject;
 
 import esayhelper.DBHelper;
 import esayhelper.jGrapeFW_Message;
+import model.OpFile;
 
 @WebServlet(name = "Upload", urlPatterns = { "/Upload" })
 public class UploadFile extends HttpServlet {
 	private static final long serialVersionUID = 1L;
+	private OpFile files = new OpFile();
+	private JSONObject _obj = new JSONObject();
+	
 	private String oldname = ""; // 原名称
 	private String newname = ""; // 新名称
 //	private String type = ""; // 类型
@@ -42,10 +46,11 @@ public class UploadFile extends HttpServlet {
 		doPost(request, response);
 	}
 
+	@SuppressWarnings("unchecked")
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		response.setHeader("Access-Control-Allow-Origin", "*");
-		response.setHeader("Access-Control-Allow-Methods","POST,GET,OPTIONS");
+//		response.setHeader("Access-Control-Allow-Methods","POST,GET,OPTIONS");
 		String msg ="";
 		try {
 			// String path = request.getParameter("path");
@@ -95,8 +100,8 @@ public class UploadFile extends HttpServlet {
 				map.put("fatherid", 0);
 				map.put("filepath", filepath);
 				JSONObject object = new JSONObject(map);
-				msg = inserts(object);
-				// 临时目录用来存放所有分片文件
+				_obj.put("records", files.insert(object));
+				msg = jGrapeFW_Message.netMSG(0, _obj.toString());
 				String tempFileDir = getTempFilePath(path) + File.separator + id;
 				File parentFileDir = new File(tempFileDir);
 				if (!parentFileDir.exists()) {
@@ -114,8 +119,6 @@ public class UploadFile extends HttpServlet {
 						uploadDone = false;
 					}
 				}
-				// 所有分片文件都上传完成
-				// 将所有分片文件合并到一个文件中
 				if (uploadDone) {
 					File destTempFile = new File(path, fileName);
 					for (int i = 0; i < chunks; i++) {
@@ -124,19 +127,11 @@ public class UploadFile extends HttpServlet {
 						FileUtils.copyFile(partFile, destTempfos);
 						destTempfos.close();
 					}
-					// 得到 destTempFile 就是最终的文件
-					// 添加到文件系统或者存储中
-					
-					// 删除临时目录中的分片文件
 					FileUtils.deleteDirectory(parentFileDir);
-					// 删除临时文件
-//					destTempFile.delete();
-					// ResponseUtil.responseSuccess(response, null);
 				} else {
 					// 临时文件创建失败
 					if (chunk == chunks - 1) {
 						FileUtils.deleteDirectory(parentFileDir);
-						// ResponseUtil.responseFail(response, "500", "内部错误");
 					}
 				}
 			}
@@ -146,7 +141,6 @@ public class UploadFile extends HttpServlet {
 	}
 
 	private String getTempFilePath(String tempath) {
-//		String tempath = "E://temp";
 		File file = new File(tempath);
 		if (!file.exists()) {
 			file.mkdirs();
@@ -168,11 +162,11 @@ public class UploadFile extends HttpServlet {
 		}
 		return ExtName;
 	}
-	//插入文件信息到数据库
-	public String inserts(JSONObject object){
-		DBHelper helper = new DBHelper("mongodb", "file");
-		return jGrapeFW_Message.netMSG(0, helper.data(object).insertOnce().toString());
-	}
+//	//插入文件信息到数据库
+//	public String inserts(JSONObject object){
+//		DBHelper helper = new DBHelper("mongodb", "file");
+//		return jGrapeFW_Message.netMSG(0, helper.data(object).insertOnce().toString());
+//	}
 	
 	//判断文件类型
 	public int GetFileType(String extname){
