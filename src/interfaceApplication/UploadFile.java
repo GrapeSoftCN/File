@@ -3,7 +3,6 @@ package interfaceApplication;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,7 +20,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.json.simple.JSONObject;
 
-import esayhelper.DBHelper;
+import esayhelper.JSONHelper;
 import esayhelper.jGrapeFW_Message;
 import model.OpFile;
 
@@ -32,11 +31,7 @@ public class UploadFile extends HttpServlet {
 	private JSONObject _obj = new JSONObject();
 	
 	private String oldname = ""; // 原名称
-	private String newname = ""; // 新名称
-//	private String type = ""; // 类型
 	private String ExtName = ""; // 扩展名
-	private String size = ""; // 文件大小
-	private String filepath = "";//文件路径
 	public UploadFile() {
 		super();
 	}
@@ -50,14 +45,12 @@ public class UploadFile extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		response.setHeader("Access-Control-Allow-Origin", "*");
-//		response.setHeader("Access-Control-Allow-Methods","POST,GET,OPTIONS");
+		response.setHeader("Content-type", "text/html;charset=UTF-8");
 		String msg ="";
 		try {
-			// String path = request.getParameter("path");
 			boolean isMultipart = ServletFileUpload.isMultipartContent(request);
 			if (isMultipart) {
 				FileItemFactory factory = new DiskFileItemFactory();
-//				String path = request.getRealPath("/file/upload");
 				String path = this.getServletContext().getRealPath("/WEB-INF/upload");
 				if (!new File(path).exists()) {
 					new File(path).mkdir();
@@ -86,21 +79,23 @@ public class UploadFile extends HttpServlet {
 					}
 					filesize +=fileItem.getSize();
 				}
-				oldname = fileName;
-				ExtName = ext(fileName);
-				newname = mknew(fileName);
-				size = filesize+"";
-				filepath = path;
-				HashMap<String, Object> map = new HashMap<String, Object>();
-				map.put("fileoldname", oldname);
-				map.put("filenewname", newname);
-				map.put("filetype", GetFileType(ExtName));
-				map.put("fileextname", ExtName);
-				map.put("size", size);
-				map.put("fatherid", 0);
-				map.put("filepath", filepath);
-				JSONObject object = new JSONObject(map);
-				_obj.put("records", files.insert(object));
+//				oldname = fileName;
+//				ExtName = ext(fileName);
+//				newname = mknew(fileName);
+//				size = filesize+"";
+//				filepath = path;
+//				HashMap<String, Object> map = new HashMap<String, Object>();
+				JSONObject object = new JSONObject();
+				object.put("fileoldname", fileName);
+				object.put("filenewname", mknew(fileName));
+				object.put("filetype", GetFileType(ExtName));
+				object.put("fileextname", ext(fileName));
+				object.put("size", String.valueOf(filesize));
+				object.put("fatherid", 0);
+				object.put("filepath", path);
+				object.put("isdelete", 0);
+//				JSONObject object = new JSONObject(map);
+				_obj.put("records", JSONHelper.string2json(files.insert(object)));
 				msg = jGrapeFW_Message.netMSG(0, _obj.toString());
 				String tempFileDir = getTempFilePath(path) + File.separator + id;
 				File parentFileDir = new File(tempFileDir);
@@ -149,24 +144,20 @@ public class UploadFile extends HttpServlet {
 	}
 	//新文件名称
 	public String mknew(String name) {
+		String str = UUID.randomUUID().toString();
 		String names = ext(name);
-		return !names.equals(".") ? (UUID.randomUUID().toString() + "." + names)
-				: (UUID.randomUUID().toString());
+		return !names.equals(".") ? (str.replace("-", "") + "." + names)
+				: (str.replace("-", ""));
 	}
 	//获取扩展名
 	public String ext(String name) {
-		if (oldname.contains(".")) {
-			ExtName = oldname.substring(oldname.lastIndexOf(".") + 1);
+		if (name.contains(".")) {
+			ExtName = name.substring(name.lastIndexOf(".") + 1);
 		} else {
 			ExtName = "";
 		}
 		return ExtName;
 	}
-//	//插入文件信息到数据库
-//	public String inserts(JSONObject object){
-//		DBHelper helper = new DBHelper("mongodb", "file");
-//		return jGrapeFW_Message.netMSG(0, helper.data(object).insertOnce().toString());
-//	}
 	
 	//判断文件类型
 	public int GetFileType(String extname){
@@ -199,7 +190,6 @@ public class UploadFile extends HttpServlet {
 		case "xls":
 		case "ppt":
 		case "txt":
-		case "rar":
 		case "htm":
 		case "html":
 		case "pdf":
@@ -215,7 +205,7 @@ public class UploadFile extends HttpServlet {
 			break;
 		//其他
 		default:
-			type=99;
+			type=5;
 			break;
 		}
 		return type;
