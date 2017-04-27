@@ -21,6 +21,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.json.simple.JSONObject;
 
 import esayhelper.JSONHelper;
+import esayhelper.TimeHelper;
 import esayhelper.jGrapeFW_Message;
 import model.OpFile;
 
@@ -30,7 +31,6 @@ public class UploadFile extends HttpServlet {
 	private OpFile files = new OpFile();
 	private JSONObject _obj = new JSONObject();
 	
-	private String oldname = ""; // 原名称
 	private String ExtName = ""; // 扩展名
 	public UploadFile() {
 		super();
@@ -46,12 +46,15 @@ public class UploadFile extends HttpServlet {
 			throws ServletException, IOException {
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		response.setHeader("Content-type", "text/html;charset=UTF-8");
+		String fatherid = request.getParameter("folderid");
 		String msg ="";
+		boolean uploadDone=true;
 		try {
+			String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
 			boolean isMultipart = ServletFileUpload.isMultipartContent(request);
 			if (isMultipart) {
 				FileItemFactory factory = new DiskFileItemFactory();
-				String path = this.getServletContext().getRealPath("/WEB-INF/upload");
+				String path = this.getServletContext().getRealPath("/WEB-INF/upload/"+Date);
 				if (!new File(path).exists()) {
 					new File(path).mkdir();
 				}
@@ -70,6 +73,10 @@ public class UploadFile extends HttpServlet {
 						id = fileItem.getString();
 					} else if (fileItem.getFieldName().equals("name")) {
 						fileName = new String(fileItem.getString().getBytes("ISO-8859-1"), "UTF-8");
+						if (files.search(fileName)) {
+							response.getWriter().print(jGrapeFW_Message.netMSG(0, "文件已存在"));
+							return;
+						}
 					} else if (fileItem.getFieldName().equals("chunks")) {
 						chunks = NumberUtils.toInt(fileItem.getString());
 					} else if (fileItem.getFieldName().equals("chunk")) {
@@ -79,22 +86,15 @@ public class UploadFile extends HttpServlet {
 					}
 					filesize +=fileItem.getSize();
 				}
-//				oldname = fileName;
-//				ExtName = ext(fileName);
-//				newname = mknew(fileName);
-//				size = filesize+"";
-//				filepath = path;
-//				HashMap<String, Object> map = new HashMap<String, Object>();
 				JSONObject object = new JSONObject();
 				object.put("fileoldname", fileName);
 				object.put("filenewname", mknew(fileName));
 				object.put("filetype", GetFileType(ExtName));
 				object.put("fileextname", ext(fileName));
 				object.put("size", String.valueOf(filesize));
-				object.put("fatherid", 0);
+				object.put("fatherid", fatherid);
 				object.put("filepath", path);
 				object.put("isdelete", 0);
-//				JSONObject object = new JSONObject(map);
 				_obj.put("records", JSONHelper.string2json(files.insert(object)));
 				msg = jGrapeFW_Message.netMSG(0, _obj.toString());
 				String tempFileDir = getTempFilePath(path) + File.separator + id;
@@ -107,7 +107,6 @@ public class UploadFile extends HttpServlet {
 				FileUtils.copyInputStreamToFile(tempFileItem.getInputStream(), tempPartFile);
 				// 是否全部上传完成
 				// 所有分片都存在才说明整个文件上传完成
-				boolean uploadDone = true;
 				for (int i = 0; i < chunks; i++) {
 					File partFile = new File(parentFileDir, fileName + "_" + i + ".part");
 					if (!partFile.exists()) {

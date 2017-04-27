@@ -20,4 +20,9 @@ public class OpFile {
 		JSONObject object = file.eq("_id", new ObjectId(fid)).find();
 		return object;
 	}
+	//根据文件名判断文件是否存在
+	public boolean search(String name) {
+		JSONObject object = file.eq("fileoldname", name).find();
+		return object!=null?true:false;
+	}
 }

@@ -31,16 +31,20 @@ public class DownloadFile extends HttpServlet {
 		String msg = null;
 		try {
 			String fileid = request.getParameter("_id"); // 得到要下载的文件名
+			response.setHeader("Content-type", "text/html;charset=UTF-8");
 //			String downpath = this.getServletContext().getRealPath("/WEB-INF/upload");// 要下载文件的路径
 			JSONObject object = files.find(fileid);
+			if (object==null) {
+				msg = jGrapeFW_Message.netMSG(1, "文件不存在");
+				return;
+			}
 			String downpath = object.get("filepath").toString();
 			String filname = object.get("fileoldname").toString();
 			File file = new File(downpath + "\\" + filname);
 //			File file = new File(downpath);
 			if (!file.exists()) {
-//				return jGrapeFW_Message.netMSG(1, "文件不存在");
 				msg = jGrapeFW_Message.netMSG(1, "文件不存在");
-				response.getWriter().print(msg);
+				return;
 			} else {
 				String realname = filname.substring(filname.indexOf("_") + 1);
 				response.setHeader("content-disposition",
@@ -61,7 +65,7 @@ public class DownloadFile extends HttpServlet {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+		response.getWriter().print(msg);
 	}
 
 }

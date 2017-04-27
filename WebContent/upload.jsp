@@ -26,7 +26,7 @@
 	<script type="text/javascript">
 		var uploader = WebUploader.create({
 			swf : './js/Uploader.swf',
-			server : 'http://123.57.214.226:8080/File/Upload',
+			server : 'http://192.168.3.141:8080/File/Upload?folderid=0',
 			pick : '#picker',
 			chunked : true,//开启分片上传
 			chunkSize : 10 * 1024 * 1024,
