@@ -54,7 +54,7 @@ public class UploadFile extends HttpServlet {
 			boolean isMultipart = ServletFileUpload.isMultipartContent(request);
 			if (isMultipart) {
 				FileItemFactory factory = new DiskFileItemFactory();
-				String path = this.getServletContext().getRealPath("/WEB-INF/upload/"+Date);
+				String path = this.getServletContext().getRealPath("/upload/"+Date);
 				if (!new File(path).exists()) {
 					new File(path).mkdir();
 				}
