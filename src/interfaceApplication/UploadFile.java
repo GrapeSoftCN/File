@@ -93,7 +93,7 @@ public class UploadFile extends HttpServlet {
 				object.put("fileextname", ext(fileName));
 				object.put("size", String.valueOf(filesize));
 				object.put("fatherid", fatherid);
-				object.put("filepath", path);
+				object.put("filepath", path.split("webapps")[1]+"\\"+fileName);
 				object.put("isdelete", 0);
 				_obj.put("records", JSONHelper.string2json(files.insert(object)));
 				msg = jGrapeFW_Message.netMSG(0, _obj.toString());
