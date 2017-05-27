@@ -31,9 +31,9 @@ public class DownloadFile extends HttpServlet {
 		String msg = null;
 		try {
 			String fileid = request.getParameter("_id"); // 得到要下载的文件名
+			String appid = request.getParameter("appid"); // 得到要下载的文件名
 			response.setHeader("Content-type", "text/html;charset=UTF-8");
-//			String downpath = this.getServletContext().getRealPath("/WEB-INF/upload");// 要下载文件的路径
-			JSONObject object = files.find(fileid);
+			JSONObject object = files.find(appid,fileid);
 			if (object==null) {
 				msg = jGrapeFW_Message.netMSG(1, "文件不存在");
 				return;
