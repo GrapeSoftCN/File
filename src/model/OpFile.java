@@ -5,6 +5,7 @@ import org.json.simple.JSONObject;
 
 import esayhelper.DBHelper;
 import esayhelper.jGrapeFW_Message;
+import nlogger.nlogger;
 
 public class OpFile {
 	private static DBHelper file;
@@ -37,5 +38,28 @@ public class OpFile {
 		}
 		
 		return object != null ? true : false;
+	}
+	//只针对于文件转换
+	public int get_file_type(String appid,String fid) {
+		int ckcode = 0;
+		JSONObject object = find(appid, fid);
+		if (object!=null) {
+			try {
+				if (!("2").equals(object.get("filetype").toString())) {
+					ckcode = 0;
+				}else{
+					String extName = object.get("fileextname").toString();
+					if (extName.equals("wmv9") || extName.equals("rm") || extName.equals("rmvb")) {
+						ckcode = 1;
+					}else{
+						ckcode = 2;
+					}
+				}
+			} catch (Exception e) {
+				nlogger.logout(e);
+				ckcode = 0;
+			}
+		}
+		return ckcode;
 	}
 }
