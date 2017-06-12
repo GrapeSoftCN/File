@@ -235,6 +235,7 @@ public class UploadFile extends HttpServlet {
 		case "docx":
 		case "wps":
 		case "xls":
+		case "xlxs":
 		case "ppt":
 		case "txt":
 		case "htm":
