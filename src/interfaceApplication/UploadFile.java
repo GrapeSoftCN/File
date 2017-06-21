@@ -3,7 +3,6 @@ package interfaceApplication;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,7 +21,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.json.simple.JSONObject;
 
-import esayhelper.JSONHelper;
 import esayhelper.TimeHelper;
 import esayhelper.jGrapeFW_Message;
 import model.OpFile;
@@ -48,6 +46,7 @@ public class UploadFile extends HttpServlet {
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		request.setCharacterEncoding("UTF-8");
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		response.setHeader("Content-type", "text/html;charset=UTF-8");
 		String appid = request.getParameter("appid"); // 分表字段
@@ -131,20 +130,7 @@ public class UploadFile extends HttpServlet {
 					if (mString != null && !("").equals(mString)) {
 						response.getWriter().print(mString);
 					}
-					// JSONObject object = new JSONObject();
-					// object.put("fileoldname", fileName);
-					// object.put("filenewname", mknew(fileName));
-					// object.put("filetype", GetFileType(ExtName));
-					// object.put("fileextname", ext(fileName));
-					// object.put("size", String.valueOf(filesize));
-					// object.put("fatherid", fatherid);
-					// object.put("filepath", path.split("webapps")[1] + "\\" +
-					// fileName);
-					// // object.put("videoimg", filetype == 2
-					// // ? VideoImg.split("webapps")[1] : VideoImg);
-					// // object.put("videoimg","");
-					// object.put("isdelete", 0);
-					// object.put("MD5", MD5);
+					
 				} else {
 					if (chunk == chunks - 1) {
 						FileUtils.deleteDirectory(parentFileDir);
@@ -196,6 +182,7 @@ public class UploadFile extends HttpServlet {
 		object.put("size", String.valueOf(filesize));
 		object.put("fatherid", fatherid);
 		object.put("filepath", path.split("webapps")[1] + "\\" + fileName);
+		object.put("MD5", MD5);
 		String string = files.insert(appid, object);
 		if (string != null && !("").equals(string)) {
 			return string;

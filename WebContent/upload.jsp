@@ -26,13 +26,12 @@
 	<script type="text/javascript">
 		var uploader = WebUploader.create({
 			swf : './js/Uploader.swf',
-			server : 'http://123.57.214.226:8080/File/UploadFile?appid=13&folderid=0',
+			server : 'http://localhost:8080/File/UploadFile?appid=13&folderid=0',
 			pick : '#picker',
 			chunked : true,//开启分片上传
 			chunkSize : 10 * 1024 * 1024,
 			threads : 1,//上传并发数
-			auto : true
-
+			auto:true
 		});
 		//用户选择
 		uploader.on('fileQueued', function(file) {
