@@ -1,6 +1,5 @@
 package interfaceApplication;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -8,7 +7,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,13 +21,11 @@ import org.apache.commons.lang3.StringEscapeUtils;
 import com.artofsolving.jodconverter.DocumentConverter;
 import com.artofsolving.jodconverter.openoffice.connection.OpenOfficeConnection;
 import com.artofsolving.jodconverter.openoffice.converter.OpenOfficeDocumentConverter;
-import com.artofsolving.jodconverter.openoffice.converter.StreamOpenOfficeDocumentConverter;
 
 import esayhelper.TimeHelper;
 import esayhelper.jGrapeFW_Message;
 import model.FileConvertModel;
-import model.TranCharset;
-import nlogger.nlogger;
+import model.GetFileUrl;
 import security.codec;
 
 @WebServlet("/FileConvert")
@@ -51,14 +47,7 @@ public class FileConvert extends HttpServlet {
 		response.setCharacterEncoding("UTF-8");
 		String sourceFile = request.getParameter("sourceFile");
 		sourceFile = codec.DecodeHtmlTag(sourceFile);
-		sourceFile = "F:\\tomcat8.0\\webapps" + sourceFile;
-		try {
-			System.out.println(codeString(sourceFile));
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		// sourceFile = "C://JavaCode/tomcat/webapps" + sourceFile;
+		sourceFile = GetFileUrl.GetTomcatUrl() + sourceFile;
 		int type = Integer.parseInt(request.getParameter("type"));
 		switch (type) {
 		case 0: // 转换成pdf
@@ -76,16 +65,20 @@ public class FileConvert extends HttpServlet {
 	/**
 	 * office文件转换成pdf
 	 * 
+	 * @project File
+	 * @package interfaceApplication
+	 * @file FileConvert.java
+	 * 
 	 * @param sourceFile
 	 *            源文件地址
-	 * @param destFile
-	 *            目标文件地址
+	 * @return String 文件不存在提示或者转换成功之后的文件的地址
 	 * @throws IOException
+	 *
 	 */
 	public String office2pdf(String sourceFile) throws IOException {
 		File inputFile = new File(sourceFile);
 		String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
-		String destFile = "C://JavaCode/tomcat/webapps/File/upload/" + Date;
+		String destFile = GetFileUrl.GetTomcatUrl()+ "/File/upload/" + Date;
 		File outputFile = new File(destFile);
 		if (!inputFile.exists()) {
 			return getUTF8StringFromGBKString(jGrapeFW_Message.netMSG(99, "文件不存在"));
@@ -93,7 +86,7 @@ public class FileConvert extends HttpServlet {
 		if (!outputFile.exists()) {
 			outputFile.mkdir();
 		}
-		outputFile = new File(destFile + "\\" + (int) System.currentTimeMillis() / 1000 + ".pdf");
+		outputFile = new File(destFile + "\\" + TimeHelper.nowMillis() + ".pdf");
 		OpenOfficeConnection connection = model.execOpenOffice();
 		DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
 		converter.convert(inputFile, outputFile);
@@ -104,17 +97,18 @@ public class FileConvert extends HttpServlet {
 	/**
 	 * office文件转换成html文件
 	 * 
+	 * @project File
+	 * @package interfaceApplication
+	 * @file FileConvert.java
+	 * 
 	 * @param sourceFile
 	 *            源文件路径
-	 * @param destFile
-	 *            目标文件所在目录
+	 * @return String 文件不存在提示或者转换成功之后的文件的地址
+	 *
 	 */
 	public String office2html(String sourceFile) {
 		String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
-		// String outfile = "C://JavaCode/tomcat/webapps/File/upload/" + Date +
-		// "/"
-		// + (int) System.currentTimeMillis() / 1000 + ".html";
-		String outfile = "F://tomcat8.0/webapps/File/upload/" + Date;
+		String outfile = GetFileUrl.GetTomcatUrl() + "/File/upload/" + Date;
 		File inputFile = new File(sourceFile);
 		File outputFile = new File(outfile);
 		if (!inputFile.exists()) {
@@ -123,14 +117,11 @@ public class FileConvert extends HttpServlet {
 		if (!outputFile.exists()) {
 			outputFile.mkdir();
 		}
-		outputFile = new File(outputFile + "/" + (int) System.currentTimeMillis() / 1000 + ".html");
+		outputFile = new File(outputFile + "/" + TimeHelper.nowMillis() + ".html");
 		OpenOfficeConnection connection = model.execOpenOffice();
 		DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
-		
+
 		converter.convert(new File(sourceFile), outputFile);
-		// StreamOpenOfficeDocumentConverter converter2 = new
-		// StreamOpenOfficeDocumentConverter(connection);
-		// converter2.convert(new File(sourceFile), outputFile);
 		model.close(connection);
 		return outputFile.toString();
 	}
@@ -138,15 +129,17 @@ public class FileConvert extends HttpServlet {
 	/**
 	 * office转换成html格式，并获取html文件内容
 	 * 
+	 * @project File
+	 * @package interfaceApplication
+	 * @file FileConvert.java
+	 * 
 	 * @param sourceFile
 	 *            源文件目录
-	 * @param destFile
-	 *            目标文件目录
-	 * @return
+	 * @return String 文件不存在提示或者转换成功之后的文件的地址
+	 * 
+	 * 备注：同时删除临时文件
 	 */
 	public String office2htmlString(String sourceFile) {
-//		String string = "葡萄阿斯";
-//		return string;
 		String ffilepath = office2html(sourceFile);
 		if (ffilepath.contains("errorcode")) {
 			return ffilepath;
@@ -155,34 +148,31 @@ public class FileConvert extends HttpServlet {
 		// 获取html文件流
 		StringBuffer html = new StringBuffer();
 		try {
-			BufferedReader br = new BufferedReader(
-					new InputStreamReader(new FileInputStream(htmlFile),"gb2312"));
+			BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(htmlFile), "gb2312"));
 			while (br.ready()) {
 				html.append(br.readLine());
 			}
 			br.close();
 			// 删除临时文件
-//			htmlFile.delete();
+			htmlFile.delete();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		String string = html.toString();
-		System.out.println(TranCharset.getEncoding(string));
-		string = TranCharset.TranEncode2utf8(string);
-		string = string.replaceAll("gb2312", "utf-8");
-		//String string = html.toString();
+		return clearFormat(string);
 //		return string;
-		return html.toString();
 		// HTML文件字符串
 		// String htmlStr = html.toString();
 		// 返回经过清洁的html文本
 		// return clearFormat(html.toString());
-		
+
 	}
 
-	public String clearFormat(String htmlStr) {
+	private String clearFormat(String htmlStr) {
+		String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
+		String filepath = "http://"+GetFileUrl.GetTomcatWebUrl() + "/File/upload/" + Date; //html中包含图片的地址
 		// 获取body内容的正则
 		String bodyReg = "<BODY .*</BODY>";
 		Pattern bodyPattern = Pattern.compile(bodyReg);
@@ -193,8 +183,7 @@ public class FileConvert extends HttpServlet {
 		}
 
 		// 调整图片地址
-		// htmlStr = htmlStr.replaceAll("<IMG SRC=\"", "<IMG SRC=\"" + filepath
-		// + "/");
+		htmlStr = htmlStr.replaceAll("<IMG SRC=\"", "<IMG SRC=\"" + filepath + "/");
 		// 把<P></P>转换成</div></div>保留样式
 		// content = content.replaceAll("(<P)([^>]*>.*?)(<\\/P>)",
 		// "<div$2</div>");
@@ -209,28 +198,6 @@ public class FileConvert extends HttpServlet {
 				"<$1$2>");
 
 		return StringEscapeUtils.unescapeJava(htmlStr);
-	}
-
-	public static String codeString(String fileName) throws Exception {
-		BufferedInputStream bin = new BufferedInputStream(new FileInputStream(fileName));
-		int p = (bin.read() << 8) + bin.read();
-		String code = null;
-
-		switch (p) {
-		case 0xefbb:
-			code = "UTF-8";
-			break;
-		case 0xfffe:
-			code = "Unicode";
-			break;
-		case 0xfeff:
-			code = "UTF-16BE";
-			break;
-		default:
-			code = "GBK";
-		}
-
-		return code;
 	}
 
 	private String getUTF8StringFromGBKString(String gbkStr) {
@@ -261,13 +228,5 @@ public class FileConvert extends HttpServlet {
 			return tmp;
 		}
 		return utfBytes;
-	}
-
-	public static void main(String[] args) {
-		FileConvert convert = new FileConvert();
-		// String file = "F:"+"\\"+"test.doc";
-		// System.out.println(file);
-		System.out.println(convert.office2htmlString("F:\\tomcat8.0\\webapps\\File\\upload\\2017-06-21\\微会议.xls"));
-		// System.out.println(convert.office2pdf(file));
 	}
 }

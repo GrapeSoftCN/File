@@ -3,6 +3,7 @@ package interfaceApplication;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,21 +20,25 @@ import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.poi.hpsf.Thumbnail;
 import org.json.simple.JSONObject;
 
 import esayhelper.TimeHelper;
 import esayhelper.jGrapeFW_Message;
+import model.GetFileUrl;
 import model.OpFile;
+import net.coobird.thumbnailator.Thumbnails;
+
 @WebServlet(name = "UploadFile", urlPatterns = { "/UploadFile" })
 public class UploadFile extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private OpFile files = new OpFile();
 	private String path = "";
-	private String fileName = "";
-	private String fatherid = "";
-	private String MD5 = "";
-
+	private String fileName = ""; // 文件名称
+	private String fatherid = ""; // 所属文件夹id
+	private String MD5 = ""; // MD5码
 	private String ExtName = ""; // 扩展名
+	private String ThumbailsPath = "";
 
 	public UploadFile() {
 		super();
@@ -47,6 +52,7 @@ public class UploadFile extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
+		response.setCharacterEncoding("UTF-8");
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		response.setHeader("Content-type", "text/html;charset=UTF-8");
 		String appid = request.getParameter("appid"); // 分表字段
@@ -61,6 +67,10 @@ public class UploadFile extends HttpServlet {
 				if (!new File(path).exists()) {
 					new File(path).mkdir();
 				}
+				ThumbailsPath = path + "\\" + "thumbnail\\";
+				if (!new File(ThumbailsPath).exists()) {
+					new File(ThumbailsPath).mkdir();
+				}
 				ServletFileUpload upload = new ServletFileUpload(factory);
 				// 得到所有的表单域，它们目前都被当作FileItem
 				List<FileItem> fileItems = upload.parseRequest(request);
@@ -72,15 +82,15 @@ public class UploadFile extends HttpServlet {
 				FileItem tempFileItem = null;
 				if (fileItems != null && fileItems.size() > 0) {
 					for (FileItem fileItem : fileItems) {
-						if (!fileItem.isFormField()) {
-							fileName = fileItem.getName();
-							String string = getJson(appid, fileName, String.valueOf(fileItem.getSize()), fatherid);
-							if (string != null && !("").equals(string)) {
-								fileItem.write(new File(path + "\\" + fileName));
-								response.getWriter().println(string);
-								return;
-							}
-						}
+//						if (!fileItem.isFormField()) {
+//							fileName = fileItem.getName();
+//							String string = getJson(appid, fileName, String.valueOf(fileItem.getSize()), fatherid);
+//							if (string != null && !("").equals(string)) {
+//								fileItem.write(new File(path + "\\" + fileName));
+//								response.getWriter().println(string);
+//								return;
+//							}
+//						}
 						if (fileItem.getFieldName().equals("id")) {
 							id = fileItem.getString();
 						} else if (fileItem.getFieldName().equals("name")) {
@@ -121,7 +131,6 @@ public class UploadFile extends HttpServlet {
 					for (int i = 0; i < chunks; i++) {
 						File partFile = new File(parentFileDir, fileName + "_" + i + ".part");
 						FileOutputStream destTempfos = new FileOutputStream(destTempFile, true);
-						System.out.println(destTempfos.toString());
 						FileUtils.copyFile(partFile, destTempfos);
 						destTempfos.close();
 					}
@@ -130,7 +139,7 @@ public class UploadFile extends HttpServlet {
 					if (mString != null && !("").equals(mString)) {
 						response.getWriter().print(mString);
 					}
-					
+
 				} else {
 					if (chunk == chunks - 1) {
 						FileUtils.deleteDirectory(parentFileDir);
@@ -171,18 +180,24 @@ public class UploadFile extends HttpServlet {
 	@SuppressWarnings("unchecked")
 	private String getJson(String appid, String filename, String filesize, String fatherid) {
 		MD5 = DigestUtils.md5Hex(path + "\\" + fileName);
-		if (files.search(appid, fileName)) {
+		if (files.search(appid, MD5)) {
 			return jGrapeFW_Message.netMSG(0, "文件已存在");
 		}
+		String extname = ext(fileName);
+		int filetype = GetFileType(extname);
+		String filepath = path.split("webapps")[1] + "\\" + fileName;
 		JSONObject object = new JSONObject();
 		object.put("fileoldname", fileName);
 		object.put("filenewname", mknew(fileName));
-		object.put("filetype", GetFileType(ExtName));
-		object.put("fileextname", ext(fileName));
+		object.put("filetype", filetype);
+		object.put("fileextname", extname);
 		object.put("size", String.valueOf(filesize));
 		object.put("fatherid", fatherid);
-		object.put("filepath", path.split("webapps")[1] + "\\" + fileName);
+		object.put("filepath", filepath);
 		object.put("MD5", MD5);
+		object.put("isdelete", 0);
+		object.put("ThumbnailImage", (filetype == 1) ? ImageThumbnail(filetype, filepath) : ""); // 图片缩略图
+		object.put("ThumbnailVideo", (filetype == 2) ? VideoThumbnail(filetype) : ""); // 视频缩略图
 		String string = files.insert(appid, object);
 		if (string != null && !("").equals(string)) {
 			return string;
@@ -214,8 +229,6 @@ public class UploadFile extends HttpServlet {
 		case "ogg":
 		case "mov":
 			type = 2;
-			// filetype = 2;
-			// VideoImg = CutPic(type);
 			break;
 		// 文档
 		case "doc":
@@ -252,19 +265,71 @@ public class UploadFile extends HttpServlet {
 	 * @param path
 	 * @param outpath
 	 */
-	/*
-	 * private String CutPic(int type) { if (type != 2) { return ""; } else {
-	 * String outpath = path + "\\" + "thumbnail"; if (!new
-	 * File(outpath).exists()) { new File(outpath).mkdir(); } outpath = outpath
-	 * + "\\" + fileName.substring(0, fileName.lastIndexOf(".")) + ".jpg";
-	 * List<String> commend = new ArrayList<String>();
-	 * commend.add("c:\\ffmpegtest\\ffmpeg.exe"); commend.add("-i");
-	 * commend.add(path + "\\" + fileName); commend.add("-y");
-	 * commend.add("-f"); commend.add("image2"); commend.add("-ss");
-	 * commend.add("2"); // 截取多少秒之后的图片 commend.add("-t"); commend.add("0.001");
-	 * commend.add("-s"); commend.add("350*240"); commend.add(outpath); try {
-	 * ProcessBuilder builder = new ProcessBuilder(); builder.command(commend);
-	 * builder.redirectErrorStream(true); Process process = builder.start(); }
-	 * catch (Exception e) { e.printStackTrace(); } return outpath; } }
+	private String VideoThumbnail(int type) {
+		String outpath = ThumbailsPath+"\\Video\\";
+		if (!new File(outpath).exists()) {
+			new File(outpath).mkdir();
+		}
+		outpath = outpath + fileName.substring(0, fileName.lastIndexOf(".")) + ".jpg";
+		List<String> commend = new ArrayList<String>();
+		commend.add("");
+		commend.add("-i");
+		commend.add(path + "\\" + fileName);
+		commend.add("-y");
+		commend.add("-f");
+		commend.add("image2");
+		commend.add("-ss");
+		commend.add("2"); // 截取多少秒之后的图片
+		commend.add("-s");
+		commend.add("350*240");
+		commend.add(outpath);
+		try {
+			ProcessBuilder builder = new ProcessBuilder();
+			builder.command(commend).redirectErrorStream(true).start();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return getImgUrl(outpath);
+	}
+
+	/**
+	 * 获取图片缩略图
+	 * 
+	 * @project File
+	 * @package interfaceApplication
+	 * @file UploadFile.java
+	 * 
+	 * @param type
+	 *            上传文件类型
+	 * @return 图片缩略图 地址
+	 *
 	 */
+	private String ImageThumbnail(int type, String imgpath) {
+		String fileformat = GetFileUrl.getImgType();
+		String outpath = "";
+		try {
+			outpath = ThumbailsPath+"Image\\";
+			if (!new File(outpath).exists()) {
+				new File(outpath).mkdir();
+			}
+			outpath = outpath + fileName.substring(0, fileName.lastIndexOf("."));
+			imgpath = GetFileUrl.GetTomcatUrl() + imgpath;
+			Thumbnails.of(imgpath)
+					.forceSize(Integer.parseInt(GetFileUrl.getImgSize(0)), Integer.parseInt(GetFileUrl.getImgSize(1)))
+					.outputFormat(fileformat)
+					.outputQuality(Float.parseFloat(GetFileUrl.getImgQuality()))
+					.toFile(outpath);
+		} catch (Exception e) {
+			e.printStackTrace();
+			outpath = "";
+		}
+		return getImgUrl(outpath+"."+fileformat);
+	}
+
+	private String getImgUrl(String imgurl) {
+		if (imgurl.contains("webapps")) {
+			imgurl = imgurl.split("webapps")[1];
+		}
+		return imgurl;
+	}
 }

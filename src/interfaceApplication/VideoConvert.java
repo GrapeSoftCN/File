@@ -46,7 +46,7 @@ public class VideoConvert extends HttpServlet {
 
 		String appid = request.getParameter("appid");
 		String fileid = request.getParameter("fileid");
-		int ckcode = model.get_file_type(appid, appid);
+		int ckcode = model.get_file_type(appid, fileid);
 		// 获取文件路径
 		JSONObject object = model.find(appid, fileid);
 		if (object != null) {
@@ -60,11 +60,9 @@ public class VideoConvert extends HttpServlet {
 			message = "非标准格式，不能进行格式转换";
 			break;
 		case 1:
-//			OutputPath = processAVI(InputPath, OutputPath);
 			message = getImageUri(processAVI(InputPath, OutputPath));
 			break;
 		case 2:
-//			OutputPath = processOGG(InputPath, OutputPath);
 			message = getImageUri(processOGG(InputPath, OutputPath));
 			break;
 		default:
@@ -94,18 +92,6 @@ public class VideoConvert extends HttpServlet {
 		commend.add("libvorbis");
 		commend.add(OutputPath);
 		execCommand(commend, size);
-		// try {
-		// Process process = new
-		// ProcessBuilder(commend).redirectErrorStream(true).start();
-		// BufferedReader br = new BufferedReader(new
-		// InputStreamReader(process.getErrorStream()));
-		// while(br.readLine()==null){
-		// br.close();
-		// process.destroy();
-		// }
-		// } catch (Exception e) {
-		// e.printStackTrace();
-		// }
 		return OutputPath;
 	}
 
