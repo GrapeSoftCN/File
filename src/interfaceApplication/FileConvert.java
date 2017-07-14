@@ -16,8 +16,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.lang3.StringEscapeUtils;
-
 import com.artofsolving.jodconverter.DocumentConverter;
 import com.artofsolving.jodconverter.openoffice.connection.OpenOfficeConnection;
 import com.artofsolving.jodconverter.openoffice.converter.OpenOfficeDocumentConverter;
@@ -78,7 +76,7 @@ public class FileConvert extends HttpServlet {
 	public String office2pdf(String sourceFile) throws IOException {
 		File inputFile = new File(sourceFile);
 		String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
-		String destFile = GetFileUrl.GetTomcatUrl()+ "/File/upload/" + Date;
+		String destFile = GetFileUrl.GetTomcatUrl() + "/File/upload/" + Date;
 		File outputFile = new File(destFile);
 		if (!inputFile.exists()) {
 			return getUTF8StringFromGBKString(jGrapeFW_Message.netMSG(99, "文件不存在"));
@@ -117,11 +115,11 @@ public class FileConvert extends HttpServlet {
 		if (!outputFile.exists()) {
 			outputFile.mkdir();
 		}
-		outputFile = new File(outputFile + "/" + TimeHelper.nowMillis() + ".html");
+		outputFile = new File(outputFile + "/" + TimeHelper.nowSecond() + ".html");
 		OpenOfficeConnection connection = model.execOpenOffice();
 		DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
 
-		converter.convert(new File(sourceFile), outputFile);
+		converter.convert(inputFile, outputFile);
 		model.close(connection);
 		return outputFile.toString();
 	}
@@ -137,7 +135,7 @@ public class FileConvert extends HttpServlet {
 	 *            源文件目录
 	 * @return String 文件不存在提示或者转换成功之后的文件的地址
 	 * 
-	 * 备注：同时删除临时文件
+	 *         备注：同时删除临时文件
 	 */
 	public String office2htmlString(String sourceFile) {
 		String ffilepath = office2html(sourceFile);
@@ -162,7 +160,7 @@ public class FileConvert extends HttpServlet {
 		}
 		String string = html.toString();
 		return clearFormat(string);
-//		return string;
+//		 return string;
 		// HTML文件字符串
 		// String htmlStr = html.toString();
 		// 返回经过清洁的html文本
@@ -172,7 +170,7 @@ public class FileConvert extends HttpServlet {
 
 	private String clearFormat(String htmlStr) {
 		String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
-		String filepath = "http://"+GetFileUrl.GetTomcatWebUrl() + "/File/upload/" + Date; //html中包含图片的地址
+		String filepath = "http://" + GetFileUrl.GetTomcatWebUrl() + "/File/upload/" + Date; // html中包含图片的地址
 		// 获取body内容的正则
 		String bodyReg = "<BODY .*</BODY>";
 		Pattern bodyPattern = Pattern.compile(bodyReg);
@@ -185,10 +183,10 @@ public class FileConvert extends HttpServlet {
 		// 调整图片地址
 		htmlStr = htmlStr.replaceAll("<IMG SRC=\"", "<IMG SRC=\"" + filepath + "/");
 		// 把<P></P>转换成</div></div>保留样式
-		// content = content.replaceAll("(<P)([^>]*>.*?)(<\\/P>)",
-		// "<div$2</div>");
+		htmlStr = htmlStr.replaceAll("(<P)([^>]*>.*?)(<\\/P>)", "<div$2</div>");
 		// 把<P></P>转换成</div></div>并删除样式
-		htmlStr = htmlStr.replaceAll("(<P)([^>]*)(>.*?)(<\\/P>)", "<p$3</p>");
+		// htmlStr = htmlStr.replaceAll("(<P)([^>]*)(>.*?)(<\\/P>)",
+		// "<p$3</p>");
 		// 删除不需要的标签
 		htmlStr = htmlStr.replaceAll(
 				"<[/]?(font|FONT|span|SPAN|xml|XML|del|DEL|ins|INS|meta|META|[ovwxpOVWXP]:\\w+)[^>]*?>", "");
@@ -197,7 +195,7 @@ public class FileConvert extends HttpServlet {
 				"<([^>]*)(?:lang|LANG|class|CLASS|style|STYLE|size|SIZE|face|FACE|[ovwxpOVWXP]:\\w+)=(?:'[^']*'|\"\"[^\"\"]*\"\"|[^>]+)([^>]*)>",
 				"<$1$2>");
 
-		return StringEscapeUtils.unescapeJava(htmlStr);
+		return htmlStr;
 	}
 
 	private String getUTF8StringFromGBKString(String gbkStr) {

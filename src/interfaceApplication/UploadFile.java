@@ -5,7 +5,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -20,20 +19,21 @@ import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.poi.hpsf.Thumbnail;
 import org.json.simple.JSONObject;
 
 import esayhelper.TimeHelper;
-import esayhelper.jGrapeFW_Message;
+import model.FileImg;
 import model.GetFileUrl;
 import model.OpFile;
 import net.coobird.thumbnailator.Thumbnails;
+import nlogger.nlogger;
 
 @WebServlet(name = "UploadFile", urlPatterns = { "/UploadFile" })
 public class UploadFile extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private OpFile files = new OpFile();
 	private String path = "";
+	private String newName = "";
 	private String fileName = ""; // 文件名称
 	private String fatherid = ""; // 所属文件夹id
 	private String MD5 = ""; // MD5码
@@ -57,6 +57,7 @@ public class UploadFile extends HttpServlet {
 		response.setHeader("Content-type", "text/html;charset=UTF-8");
 		String appid = request.getParameter("appid"); // 分表字段
 		fatherid = request.getParameter("folderid");
+		// JSONObject obj = new JSONObject();
 		boolean uploadDone = true;
 		try {
 			String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
@@ -81,25 +82,12 @@ public class UploadFile extends HttpServlet {
 				long filesize = 0;
 				FileItem tempFileItem = null;
 				if (fileItems != null && fileItems.size() > 0) {
+					nlogger.logout("fileItems.fileItems: " + fileItems.toString());
 					for (FileItem fileItem : fileItems) {
-//						if (!fileItem.isFormField()) {
-//							fileName = fileItem.getName();
-//							String string = getJson(appid, fileName, String.valueOf(fileItem.getSize()), fatherid);
-//							if (string != null && !("").equals(string)) {
-//								fileItem.write(new File(path + "\\" + fileName));
-//								response.getWriter().println(string);
-//								return;
-//							}
-//						}
 						if (fileItem.getFieldName().equals("id")) {
 							id = fileItem.getString();
 						} else if (fileItem.getFieldName().equals("name")) {
 							fileName = new String(fileItem.getString().getBytes("ISO-8859-1"), "UTF-8");
-							MD5 = DigestUtils.md5Hex(path + "\\" + fileName);
-							if (files.search(appid, fileName)) {
-								response.getWriter().print(jGrapeFW_Message.netMSG(0, "文件已存在"));
-								return;
-							}
 						} else if (fileItem.getFieldName().equals("chunks")) {
 							chunks = NumberUtils.toInt(fileItem.getString());
 						} else if (fileItem.getFieldName().equals("chunk")) {
@@ -108,6 +96,7 @@ public class UploadFile extends HttpServlet {
 							tempFileItem = fileItem;
 						}
 						filesize += fileItem.getSize();
+						nlogger.logout("fileItem.name: " + fileItem.getName());
 					}
 				}
 				String tempFileDir = getTempFilePath(path) + File.separator + id;
@@ -127,7 +116,9 @@ public class UploadFile extends HttpServlet {
 					}
 				}
 				if (uploadDone) {
-					File destTempFile = new File(path, fileName);
+					nlogger.logout("uploadDone: " + uploadDone);
+					newName = rename(appid, 0);
+					File destTempFile = new File(path, newName);
 					for (int i = 0; i < chunks; i++) {
 						File partFile = new File(parentFileDir, fileName + "_" + i + ".part");
 						FileOutputStream destTempfos = new FileOutputStream(destTempFile, true);
@@ -136,6 +127,7 @@ public class UploadFile extends HttpServlet {
 					}
 					FileUtils.deleteDirectory(parentFileDir);
 					String mString = getJson(appid, fileName, String.valueOf(filesize), fatherid);
+					nlogger.logout("上传成功返回值： " + mString);
 					if (mString != null && !("").equals(mString)) {
 						response.getWriter().print(mString);
 					}
@@ -160,13 +152,6 @@ public class UploadFile extends HttpServlet {
 		return tempath;
 	}
 
-	// 新文件名称
-	public String mknew(String name) {
-		String str = UUID.randomUUID().toString();
-		String names = ext(name);
-		return !names.equals(".") ? (str.replace("-", "") + "." + names) : (str.replace("-", ""));
-	}
-
 	// 获取扩展名
 	private String ext(String name) {
 		if (name.contains(".")) {
@@ -180,24 +165,21 @@ public class UploadFile extends HttpServlet {
 	@SuppressWarnings("unchecked")
 	private String getJson(String appid, String filename, String filesize, String fatherid) {
 		MD5 = DigestUtils.md5Hex(path + "\\" + fileName);
-		if (files.search(appid, MD5)) {
-			return jGrapeFW_Message.netMSG(0, "文件已存在");
-		}
-		String extname = ext(fileName);
-		int filetype = GetFileType(extname);
-		String filepath = path.split("webapps")[1] + "\\" + fileName;
+		ExtName = ext(fileName);
+		int filetype = GetFileType(ExtName);
+		String filepath = path.split("webapps")[1] + "\\" + newName;
 		JSONObject object = new JSONObject();
 		object.put("fileoldname", fileName);
-		object.put("filenewname", mknew(fileName));
+		object.put("filenewname", newName);
 		object.put("filetype", filetype);
-		object.put("fileextname", extname);
+		object.put("fileextname", ExtName);
 		object.put("size", String.valueOf(filesize));
 		object.put("fatherid", fatherid);
 		object.put("filepath", filepath);
 		object.put("MD5", MD5);
 		object.put("isdelete", 0);
-		object.put("ThumbnailImage", (filetype == 1) ? ImageThumbnail(filetype, filepath) : ""); // 图片缩略图
-		object.put("ThumbnailVideo", (filetype == 2) ? VideoThumbnail(filetype) : ""); // 视频缩略图
+		object.put("ThumbnailImage", Thumbailnail(filetype, filepath, ExtName)); // 缩略图
+		nlogger.logout("getJson: " + object.toString());
 		String string = files.insert(appid, object);
 		if (string != null && !("").equals(string)) {
 			return string;
@@ -205,8 +187,23 @@ public class UploadFile extends HttpServlet {
 		return "";
 	}
 
+	// 判断是否同时上传多个文件，重新命名
+	private String rename(String appid, int Suffix) {
+		if (newName.equals("")) {
+			newName = String.valueOf(TimeHelper.nowSecond());
+		} else {
+			newName = newName + Suffix;
+		}
+		JSONObject object = files.search(appid, newName);
+		if (object != null) {
+			Suffix++;
+			newName = rename(appid, Suffix);
+		}
+		return newName + "." + ext(fileName);
+	}
+
 	// 判断文件类型
-	public int GetFileType(String extname) {
+	private int GetFileType(String extname) {
 		int type;
 		switch (extname.toLowerCase()) {
 		// 图片
@@ -226,7 +223,6 @@ public class UploadFile extends HttpServlet {
 		case "mkv":
 		case "mp4":
 		case "wmv":
-		case "ogg":
 		case "mov":
 			type = 2;
 			break;
@@ -242,13 +238,13 @@ public class UploadFile extends HttpServlet {
 		case "html":
 		case "pdf":
 		case "dwg":
-		case "exe":
 			type = 3;
 			break;
 		// 音频
 		case "mp3":
 		case "wav":
 		case "wma":
+		case "ogg":
 			type = 4;
 			break;
 		// 其他
@@ -260,70 +256,101 @@ public class UploadFile extends HttpServlet {
 	}
 
 	/**
-	 * 截取指定时间的视频图片
-	 * 
-	 * @param path
-	 * @param outpath
-	 */
-	private String VideoThumbnail(int type) {
-		String outpath = ThumbailsPath+"\\Video\\";
-		if (!new File(outpath).exists()) {
-			new File(outpath).mkdir();
-		}
-		outpath = outpath + fileName.substring(0, fileName.lastIndexOf(".")) + ".jpg";
-		List<String> commend = new ArrayList<String>();
-		commend.add("");
-		commend.add("-i");
-		commend.add(path + "\\" + fileName);
-		commend.add("-y");
-		commend.add("-f");
-		commend.add("image2");
-		commend.add("-ss");
-		commend.add("2"); // 截取多少秒之后的图片
-		commend.add("-s");
-		commend.add("350*240");
-		commend.add(outpath);
-		try {
-			ProcessBuilder builder = new ProcessBuilder();
-			builder.command(commend).redirectErrorStream(true).start();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return getImgUrl(outpath);
-	}
-
-	/**
-	 * 获取图片缩略图
+	 * 获取图片，视频缩略图
 	 * 
 	 * @project File
 	 * @package interfaceApplication
 	 * @file UploadFile.java
 	 * 
 	 * @param type
-	 *            上传文件类型
-	 * @return 图片缩略图 地址
+	 *            文件类型
+	 * @param filepath
+	 *            待操作文件地址
+	 * @return
 	 *
 	 */
-	private String ImageThumbnail(int type, String imgpath) {
-		String fileformat = GetFileUrl.getImgType();
-		String outpath = "";
+	private String Thumbailnail(int type, String filepath, String extName) {
+		String outpath = ThumbailsPath + newName.substring(0, newName.lastIndexOf(".")) + ".jpg";
+		String otherPath = GetFileUrl.GetTomcatUrl() + "\\File\\upload\\";
+		String result = "";
+		switch (type) {
+		case 1: // 图片
+			result = ImageThumbnail(filepath, outpath);
+			break;
+		case 2: // 视频
+			result = VideoThumbnail(outpath);
+			break;
+		default:
+			result = otherPath + FileImg.getIcon(extName);
+			break;
+		/*
+		 * case 3: // 文档 result = otherPath + ""; break; case 4: // 音频 result =
+		 * otherPath + ""; break; case 5: // 其他 result = otherPath + ""; break;
+		 */
+		}
+		return getImgUrl(result);
+	}
+
+	/**
+	 * 截取指定时间的视频图片
+	 * 
+	 * @project File
+	 * @package interfaceApplication
+	 * @file UploadFile.java
+	 * 
+	 * @param outpath
+	 *            视频缩略图输出地址
+	 * @return
+	 *
+	 */
+	private String VideoThumbnail(String outpath) {
+		List<String> commend = new ArrayList<String>();
+		System.out.println(GetFileUrl.getVideoUrl());
+		commend.add(GetFileUrl.getVideoUrl());
+		commend.add("-i");
+		commend.add(path + "\\" + newName);
+		commend.add("-y");
+		commend.add("-ss");
+		commend.add(GetFileUrl.getTime()); // 截取多少秒之后的图片
+		commend.add("-s");
+		commend.add(GetFileUrl.getSize());
+		commend.add(outpath);
 		try {
-			outpath = ThumbailsPath+"Image\\";
-			if (!new File(outpath).exists()) {
-				new File(outpath).mkdir();
-			}
-			outpath = outpath + fileName.substring(0, fileName.lastIndexOf("."));
-			imgpath = GetFileUrl.GetTomcatUrl() + imgpath;
-			Thumbnails.of(imgpath)
-					.forceSize(Integer.parseInt(GetFileUrl.getImgSize(0)), Integer.parseInt(GetFileUrl.getImgSize(1)))
-					.outputFormat(fileformat)
-					.outputQuality(Float.parseFloat(GetFileUrl.getImgQuality()))
-					.toFile(outpath);
+			ProcessBuilder builder = new ProcessBuilder();
+			builder.command(commend);
+			builder.start();
 		} catch (Exception e) {
-			e.printStackTrace();
+			nlogger.logout(e);
 			outpath = "";
 		}
-		return getImgUrl(outpath+"."+fileformat);
+		return outpath;
+	}
+
+	/**
+	 * 获取上传图片缩略图
+	 * 
+	 * @project File
+	 * @package interfaceApplication
+	 * @file UploadFile.java
+	 * 
+	 * @param inputpath
+	 *            待操作图片
+	 * @param outpath
+	 *            图片缩略图输出地址
+	 * @return
+	 *
+	 */
+	private String ImageThumbnail(String inputpath, String outpath) {
+		try {
+			Thumbnails.of(GetFileUrl.GetTomcatUrl() + inputpath)
+					.forceSize(Integer.parseInt(GetFileUrl.getImgSize(0)), Integer.parseInt(GetFileUrl.getImgSize(1)))
+					.outputFormat(GetFileUrl.getImgType()).outputQuality(Float.parseFloat(GetFileUrl.getImgQuality()))
+					.toFile(outpath);
+		} catch (Exception e) {
+			nlogger.logout(e);
+			outpath = "";
+		}
+		return outpath;
 	}
 
 	private String getImgUrl(String imgurl) {
