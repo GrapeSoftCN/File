@@ -10,11 +10,6 @@
 <title>Insert title here</title>
 </head>
 <body>
-	<form action="UploadFile" method="post" enctype="multipart/form-data"> 
-    文件上传：<input type="file" name="fileupload"/><br/>
-    文件上传：<input type="file" name="fileuploads"/>  <br/>
-    描述：<input type="text" name="desc"/>  <br/>
-    <input type="submit" value="submit"/>  
-    </form>
+	Hello!
 </body>
 </html>

@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URLEncoder;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -15,7 +14,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.json.simple.JSONObject;
 
-import esayhelper.jGrapeFW_Message;
+import JGrapeSystem.jGrapeFW_Message;
 import model.OpFile;
 
 @WebServlet(name = "Download", urlPatterns = { "/Download" })

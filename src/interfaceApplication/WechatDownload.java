@@ -11,9 +11,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import esayhelper.TimeHelper;
-import esayhelper.fileHelper;
+import file.fileHelper;
 import thirdsdk.wechatHelper;
+import time.TimeHelper;
 
 /**
  * Servlet implementation class WechatDownload

@@ -1,9 +1,6 @@
 package interfaceApplication;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.UUID;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -11,9 +8,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import esayhelper.TimeHelper;
 import nlogger.nlogger;
 import offices.excelHelper;
+import time.TimeHelper;
 
 /**
  * Servlet implementation class ExportReport
@@ -53,7 +50,7 @@ public class ExportReport extends HttpServlet {
 			// fos.close();
 			// }
 			// }
-			File file = excelHelper.out(info);
+			byte[] file = excelHelper.out(info);
 			path = fileurl + file.toString();
 		} catch (Exception e) {
 			nlogger.logout(e);

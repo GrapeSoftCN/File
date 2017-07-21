@@ -3,13 +3,13 @@ package model;
 import org.bson.types.ObjectId;
 import org.json.simple.JSONObject;
 
+import JGrapeSystem.jGrapeFW_Message;
 import database.DBHelper;
-import esayhelper.jGrapeFW_Message;
 import nlogger.nlogger;
 
 public class OpFile {
-	private static DBHelper file;
-	static {
+	private DBHelper file;
+	public OpFile(){
 		file = new DBHelper("mongodb", "file");
 	}
 

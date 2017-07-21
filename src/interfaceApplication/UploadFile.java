@@ -21,12 +21,12 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.json.simple.JSONObject;
 
-import esayhelper.TimeHelper;
 import model.FileImg;
 import model.GetFileUrl;
 import model.OpFile;
 import net.coobird.thumbnailator.Thumbnails;
 import nlogger.nlogger;
+import time.TimeHelper;
 
 @WebServlet(name = "UploadFile", urlPatterns = { "/UploadFile" })
 public class UploadFile extends HttpServlet {
