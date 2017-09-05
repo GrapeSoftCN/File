@@ -48,7 +48,6 @@ public class WechatDownload extends HttpServlet {
 		String fileHost = "";
 		byte[] by = helper.materialTempData(mediaid);
 		if (by != null) {
-			// if (JSONHelper.string2json(data) == null) {
 			String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
 			String fileurl = "C://JavaCode/tomcat/webapps/File/upload/" + Date + "/wechat";
 			String path = fileurl + "/" + mediaid + ".mp3";
@@ -69,7 +68,6 @@ public class WechatDownload extends HttpServlet {
 					e.printStackTrace();
 				}
 			}
-			// }
 		}
 		return fileHost;
 	}

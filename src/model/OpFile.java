@@ -1,21 +1,27 @@
 package model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.bson.types.ObjectId;
 import org.json.simple.JSONObject;
 
 import JGrapeSystem.jGrapeFW_Message;
 import database.DBHelper;
 import nlogger.nlogger;
+import rpc.execRequest;
+import session.session;
+import string.StringHelper;
 
 public class OpFile {
 	private DBHelper file;
-	public OpFile(){
+
+	public OpFile() {
 		file = new DBHelper("mongodb", "file");
 	}
 
 	// 文件信息入库
 	public String insert(String appid, JSONObject object) {
-		nlogger.logout("insert: " + appid + ", object: " + object.toString());
 		if (object != null && !("").equals(object)) {
 			String info = file.bind(appid).data(object).insertOnce().toString();
 			return find(appid, info).toString();
@@ -35,8 +41,23 @@ public class OpFile {
 	}
 
 	// 根据文件id查找文件
+	@SuppressWarnings("unchecked")
 	public JSONObject find(String appid, String fid) {
+		String image = "";
+		String[] value = null;
+		List<String> list = new ArrayList<String>();
 		JSONObject object = file.bind(appid).eq("_id", new ObjectId(fid)).find();
+		if (object.containsKey("pptImage")) {
+			image = object.getString("pptImage");
+			if (!image.equals("")) {
+				value = image.split(",");
+				for (String string : value) {
+					string = "http://" + new GetFileUrl().GetTomcatWebUrl() + string;
+					list.add(string);
+				}
+			}
+			object.put("pptImage", StringHelper.join(list));
+		}
 		return object;
 	}
 

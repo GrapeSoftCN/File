@@ -18,7 +18,7 @@ public class GetFileUrl {
 	 * @return
 	 *
 	 */
-	private static String getConfig(String key) {
+	private String getConfig(String key) {
 		String value = "";
 		try {
 			Properties pro = new Properties();
@@ -40,7 +40,7 @@ public class GetFileUrl {
 	 * @return
 	 *
 	 */
-	public static String getOpenOfficeUrl() {
+	public String getOpenOfficeUrl() {
 		return getConfig("openofficeurl");
 	}
 
@@ -56,7 +56,7 @@ public class GetFileUrl {
 	 * @return
 	 *
 	 */
-	public static String getOpenOffice(int sign) {
+	public String getOpenOffice(int sign) {
 		String host = null;
 		try {
 			if (sign == 0 || sign == 1) {
@@ -80,7 +80,7 @@ public class GetFileUrl {
 	 *
 	 */
 
-	public static String GetTomcatUrl() {
+	public String GetTomcatUrl() {
 		return getConfig("tomcatUrl");
 	}
 
@@ -95,8 +95,22 @@ public class GetFileUrl {
 	 *
 	 */
 
-	public static String GetTomcatWebUrl() {
+	public String GetTomcatWebUrl() {
 		return getConfig("tomcatWebUrl");
+	}
+
+	/**
+	 * 获取临时文件存放路径
+	 * 
+	 * @project File
+	 * @package model
+	 * @file GetFileUrl.java
+	 * 
+	 * @return
+	 *
+	 */
+	public String GetTempPath() {
+		return getConfig("temppath");
 	}
 
 	/**
@@ -109,7 +123,7 @@ public class GetFileUrl {
 	 * @return
 	 *
 	 */
-	public static String getVideoUrl() {
+	public String getVideoUrl() {
 		return getConfig("ffmpegUrl");
 	}
 
@@ -123,7 +137,7 @@ public class GetFileUrl {
 	 * @return
 	 *
 	 */
-	public static String getTime() {
+	public String getTime() {
 		return getConfig("Video");
 	}
 
@@ -137,7 +151,7 @@ public class GetFileUrl {
 	 * @return
 	 *
 	 */
-	public static String getSize() {
+	public String getSize() {
 		return getConfig("VideoSize");
 	}
 
@@ -151,7 +165,7 @@ public class GetFileUrl {
 	 * @return
 	 *
 	 */
-	public static String getImgSize(int Sign) {
+	public String getImgSize(int Sign) {
 		String value = null;
 		try {
 			if (Sign == 0 || Sign == 1) {
@@ -165,6 +179,20 @@ public class GetFileUrl {
 	}
 
 	/**
+	 * 图片缩略图比例
+	 * 
+	 * @project File
+	 * @package model
+	 * @file GetFileUrl.java
+	 * 
+	 * @return
+	 *
+	 */
+	public float getScale() {
+		return Float.parseFloat(getConfig("ImageScale"));
+	}
+
+	/**
 	 * 图片缩略图格式，如jpg。。。
 	 * 
 	 * @project File
@@ -174,7 +202,7 @@ public class GetFileUrl {
 	 * @return
 	 *
 	 */
-	public static String getImgType() {
+	public String getImgType() {
 		return getConfig("ImgType");
 	}
 
@@ -188,7 +216,7 @@ public class GetFileUrl {
 	 * @return
 	 *
 	 */
-	public static String getImgQuality() {
+	public String getImgQuality() {
 		return getConfig("ImgQuality");
 	}
 }

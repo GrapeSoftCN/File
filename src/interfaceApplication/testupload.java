@@ -36,7 +36,6 @@ public class testupload extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse
 	 *      response)
 	 */
-	@SuppressWarnings("static-access")
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		System.out.println(request.getParameter("Files").toString());
@@ -50,11 +49,6 @@ public class testupload extends HttpServlet {
 				List<FileItem> list = upload.parseRequest(request);
 				for (FileItem item : list) {
 					if (!item.isFormField()) {
-//						String fieldName = item.getFieldName();// 获取元素名称
-//						String value = item.getString("UTF-8"); // 获取元素值
-//						System.out.println(fieldName + " : " + value);
-//
-//					} else {
 
 						String name = item.getName(); // 上传的文件名称
 						String id = UUID.randomUUID().toString();

@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -21,6 +22,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.json.simple.JSONObject;
 
+import file.fileHelper;
 import model.FileImg;
 import model.GetFileUrl;
 import model.OpFile;
@@ -30,15 +32,18 @@ import time.TimeHelper;
 
 @WebServlet(name = "UploadFile", urlPatterns = { "/UploadFile" })
 public class UploadFile extends HttpServlet {
+	private GetFileUrl fileUrl = new GetFileUrl();
 	private static final long serialVersionUID = 1L;
 	private OpFile files = new OpFile();
 	private String path = "";
 	private String newName = "";
 	private String fileName = ""; // 文件名称
-	private String fatherid = ""; // 所属文件夹id
+	private String fatherid = "0"; // 所属文件夹id
 	private String MD5 = ""; // MD5码
 	private String ExtName = ""; // 扩展名
 	private String ThumbailsPath = "";
+	private String tempPath = fileUrl.GetTempPath();
+	private String wbid = "";
 
 	public UploadFile() {
 		super();
@@ -57,7 +62,7 @@ public class UploadFile extends HttpServlet {
 		response.setHeader("Content-type", "text/html;charset=UTF-8");
 		String appid = request.getParameter("appid"); // 分表字段
 		fatherid = request.getParameter("folderid");
-		// JSONObject obj = new JSONObject();
+		wbid = request.getParameter("wbid");
 		boolean uploadDone = true;
 		try {
 			String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
@@ -65,8 +70,9 @@ public class UploadFile extends HttpServlet {
 			if (isMultipart) {
 				FileItemFactory factory = new DiskFileItemFactory();
 				path = this.getServletContext().getRealPath("/upload/" + Date);
-				if (!new File(path).exists()) {
-					new File(path).mkdir();
+				File fiel = new File(path);
+				if (!fiel.exists()) {
+					fiel.mkdir();
 				}
 				ThumbailsPath = path + "\\" + "thumbnail\\";
 				if (!new File(ThumbailsPath).exists()) {
@@ -82,7 +88,6 @@ public class UploadFile extends HttpServlet {
 				long filesize = 0;
 				FileItem tempFileItem = null;
 				if (fileItems != null && fileItems.size() > 0) {
-					nlogger.logout("fileItems.fileItems: " + fileItems.toString());
 					for (FileItem fileItem : fileItems) {
 						if (fileItem.getFieldName().equals("id")) {
 							id = fileItem.getString();
@@ -96,10 +101,12 @@ public class UploadFile extends HttpServlet {
 							tempFileItem = fileItem;
 						}
 						filesize += fileItem.getSize();
-						nlogger.logout("fileItem.name: " + fileItem.getName());
+						if (fileName == null || fileName.equals("")) {
+							fileName = fileItem.getName();
+						}
 					}
 				}
-				String tempFileDir = getTempFilePath(path) + File.separator + id;
+				String tempFileDir = getTempFilePath(tempPath) + File.separator + id;
 				File parentFileDir = new File(tempFileDir);
 				if (!parentFileDir.exists()) {
 					parentFileDir.mkdirs();
@@ -116,22 +123,23 @@ public class UploadFile extends HttpServlet {
 					}
 				}
 				if (uploadDone) {
-					nlogger.logout("uploadDone: " + uploadDone);
-					newName = rename(appid, 0);
-					File destTempFile = new File(path, newName);
-					for (int i = 0; i < chunks; i++) {
-						File partFile = new File(parentFileDir, fileName + "_" + i + ".part");
-						FileOutputStream destTempfos = new FileOutputStream(destTempFile, true);
-						FileUtils.copyFile(partFile, destTempfos);
-						destTempfos.close();
+					// newName = rename(appid, 0);
+					newName = UUID.randomUUID().toString() + "." + ext(fileName);
+					String files = path + "\\" + newName;
+					if (fileHelper.createFileEx(files)) {
+						File destTempFile = new File(files);
+						for (int i = 0; i < chunks; i++) {
+							File partFile = new File(parentFileDir, fileName + "_" + i + ".part");
+							FileOutputStream destTempfos = new FileOutputStream(destTempFile, true);
+							FileUtils.copyFile(partFile, destTempfos);
+							destTempfos.close();
+						}
+//						FileUtils.deleteDirectory(parentFileDir);
+						String mString = getJson(appid, fileName, String.valueOf(filesize), fatherid);
+						if (mString != null && !("").equals(mString)) {
+							response.getWriter().print(mString);
+						}
 					}
-					FileUtils.deleteDirectory(parentFileDir);
-					String mString = getJson(appid, fileName, String.valueOf(filesize), fatherid);
-					nlogger.logout("上传成功返回值： " + mString);
-					if (mString != null && !("").equals(mString)) {
-						response.getWriter().print(mString);
-					}
-
 				} else {
 					if (chunk == chunks - 1) {
 						FileUtils.deleteDirectory(parentFileDir);
@@ -145,6 +153,7 @@ public class UploadFile extends HttpServlet {
 	}
 
 	private String getTempFilePath(String tempath) {
+		tempath = tempath + "\\temp";
 		File file = new File(tempath);
 		if (!file.exists()) {
 			file.mkdirs();
@@ -163,13 +172,13 @@ public class UploadFile extends HttpServlet {
 	}
 
 	@SuppressWarnings("unchecked")
-	private String getJson(String appid, String filename, String filesize, String fatherid) {
-		MD5 = DigestUtils.md5Hex(path + "\\" + fileName);
-		ExtName = ext(fileName);
+	private String getJson(String appid, String filename, String filesize, String fatherid) throws Exception {
+		MD5 = DigestUtils.md5Hex(path + "\\" + filename);
+		ExtName = ext(filename);
 		int filetype = GetFileType(ExtName);
 		String filepath = path.split("webapps")[1] + "\\" + newName;
 		JSONObject object = new JSONObject();
-		object.put("fileoldname", fileName);
+		object.put("fileoldname", filename);
 		object.put("filenewname", newName);
 		object.put("filetype", filetype);
 		object.put("fileextname", ExtName);
@@ -179,7 +188,9 @@ public class UploadFile extends HttpServlet {
 		object.put("MD5", MD5);
 		object.put("isdelete", 0);
 		object.put("ThumbnailImage", Thumbailnail(filetype, filepath, ExtName)); // 缩略图
-		nlogger.logout("getJson: " + object.toString());
+		object.put("pptImage", pptConvertImage(ExtName, filepath));
+		object.put("time", TimeHelper.nowMillis());
+		object.put("wbid", wbid);
 		String string = files.insert(appid, object);
 		if (string != null && !("").equals(string)) {
 			return string;
@@ -187,21 +198,18 @@ public class UploadFile extends HttpServlet {
 		return "";
 	}
 
-	// 判断是否同时上传多个文件，重新命名
-	private String rename(String appid, int Suffix) {
-		if (newName.equals("")) {
-			newName = String.valueOf(TimeHelper.nowSecond());
-		} else {
-			newName = newName + Suffix;
+	private String pptConvertImage(String ext,String filepath) throws Exception {
+		String temp = "";
+		filepath = fileUrl.GetTomcatUrl()+filepath;
+		FileConvert convert = new FileConvert();
+		if (ext.equals("ppt") || ext.equals("pptx")) {
+			temp = convert.pdf2Jpgs(filepath);
+			if (temp.contains("errorcode")) {
+				temp = "";
+			}
 		}
-		JSONObject object = files.search(appid, newName);
-		if (object != null) {
-			Suffix++;
-			newName = rename(appid, Suffix);
-		}
-		return newName + "." + ext(fileName);
+		return temp;
 	}
-
 	// 判断文件类型
 	private int GetFileType(String extname) {
 		int type;
@@ -233,6 +241,7 @@ public class UploadFile extends HttpServlet {
 		case "xls":
 		case "xlxs":
 		case "ppt":
+		case "pptx":
 		case "txt":
 		case "htm":
 		case "html":
@@ -271,7 +280,7 @@ public class UploadFile extends HttpServlet {
 	 */
 	private String Thumbailnail(int type, String filepath, String extName) {
 		String outpath = ThumbailsPath + newName.substring(0, newName.lastIndexOf(".")) + ".jpg";
-		String otherPath = GetFileUrl.GetTomcatUrl() + "\\File\\upload\\";
+		String otherPath = fileUrl.GetTomcatUrl() + "\\File\\upload\\";
 		String result = "";
 		switch (type) {
 		case 1: // 图片
@@ -305,15 +314,15 @@ public class UploadFile extends HttpServlet {
 	 */
 	private String VideoThumbnail(String outpath) {
 		List<String> commend = new ArrayList<String>();
-		System.out.println(GetFileUrl.getVideoUrl());
-		commend.add(GetFileUrl.getVideoUrl());
+		System.out.println(fileUrl.getVideoUrl());
+		commend.add(fileUrl.getVideoUrl());
 		commend.add("-i");
 		commend.add(path + "\\" + newName);
 		commend.add("-y");
 		commend.add("-ss");
-		commend.add(GetFileUrl.getTime()); // 截取多少秒之后的图片
+		commend.add(fileUrl.getTime()); // 截取多少秒之后的图片
 		commend.add("-s");
-		commend.add(GetFileUrl.getSize());
+		commend.add(fileUrl.getSize());
 		commend.add(outpath);
 		try {
 			ProcessBuilder builder = new ProcessBuilder();
@@ -342,10 +351,14 @@ public class UploadFile extends HttpServlet {
 	 */
 	private String ImageThumbnail(String inputpath, String outpath) {
 		try {
-			Thumbnails.of(GetFileUrl.GetTomcatUrl() + inputpath)
-					.forceSize(Integer.parseInt(GetFileUrl.getImgSize(0)), Integer.parseInt(GetFileUrl.getImgSize(1)))
-					.outputFormat(GetFileUrl.getImgType()).outputQuality(Float.parseFloat(GetFileUrl.getImgQuality()))
-					.toFile(outpath);
+			if (fileHelper.createFileEx(outpath)) {
+				Thumbnails.of(fileUrl.GetTomcatUrl() + inputpath).scale(fileUrl.getScale())
+						// .forceSize(Integer.parseInt(GetFileUrl.getImgSize(0)),
+						// Integer.parseInt(GetFileUrl.getImgSize(1)))
+						.outputFormat(fileUrl.getImgType())
+						.outputQuality(Float.parseFloat(fileUrl.getImgQuality())).toFile(outpath);
+			}
+//			FileUtils.deleteDirectory(new File(tempPath));
 		} catch (Exception e) {
 			nlogger.logout(e);
 			outpath = "";

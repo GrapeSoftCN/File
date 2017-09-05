@@ -15,10 +15,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.json.simple.JSONObject;
 
 import JGrapeSystem.jGrapeFW_Message;
+import model.GetFileUrl;
 import model.OpFile;
 
 @WebServlet(name = "Download", urlPatterns = { "/Download" })
 public class DownloadFile extends HttpServlet {
+	private GetFileUrl fileUrl = new GetFileUrl();
 	private static final long serialVersionUID = 1L;
 	private OpFile files = new OpFile();
     public DownloadFile() {
@@ -39,17 +41,18 @@ public class DownloadFile extends HttpServlet {
 				return;
 			}
 			String downpath = object.get("filepath").toString();
-			String filname = object.get("fileoldname").toString();
-			File file = new File(downpath + "\\" + filname);
+			String name = object.get("filenewname").toString();
+			String path = fileUrl.GetTomcatUrl();
+			File file = new File(path+downpath);
 //			File file = new File(downpath);
 			if (!file.exists()) {
 				msg = jGrapeFW_Message.netMSG(1, "文件不存在");
 				return;
 			} else {
-				String realname = filname.substring(filname.indexOf("_") + 1);
+//				String realname = filname.substring(filname.indexOf("_") + 1);
 				response.setHeader("content-disposition",
-						"attachment;filename=" + URLEncoder.encode(realname, "UTF-8"));
-				FileInputStream in = new FileInputStream(downpath + "\\" + filname);
+						"attachment;filename=" + URLEncoder.encode(name, "UTF-8"));
+				FileInputStream in = new FileInputStream(path+downpath);
 //				FileOutputStream os = new FileOutputStream("C://downfile//" + downfile);
 				OutputStream out = response.getOutputStream();
 				byte[] buffer = new byte[4 * 1024];

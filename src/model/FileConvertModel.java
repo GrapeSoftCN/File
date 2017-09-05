@@ -6,6 +6,7 @@ import com.artofsolving.jodconverter.openoffice.connection.SocketOpenOfficeConne
 import nlogger.nlogger;
 
 public class FileConvertModel {
+	private GetFileUrl fileUrl = new GetFileUrl();
 	private Process process = null;
 	private OpenOfficeConnection connection = null;
 	private String command = "";
@@ -16,9 +17,9 @@ public class FileConvertModel {
 	 * @return
 	 */
 	public OpenOfficeConnection execOpenOffice() {
-		String ip = GetFileUrl.getOpenOffice(0);
-		String port = GetFileUrl.getOpenOffice(1);
-		command = GetFileUrl.getOpenOfficeUrl() + "\\program\\soffice.exe -headless -accept=\"socket,host=" + ip
+		String ip = fileUrl.getOpenOffice(0);
+		String port = fileUrl.getOpenOffice(1);
+		command = fileUrl.getOpenOfficeUrl() + "\\program\\soffice.exe -headless -accept=\"socket,host=" + ip
 				+ ",port=" + port + ";urp;\"";
 		return Connection(command, ip, port);
 	}
