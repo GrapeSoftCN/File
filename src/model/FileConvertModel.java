@@ -30,9 +30,15 @@ public class FileConvertModel {
 			process = Runtime.getRuntime().exec(command);
 			connection = new SocketOpenOfficeConnection(ip, Integer.parseInt(port));
 			connection.connect();
-			if (!connection.isConnected()) {
-				Connection(command, ip, port);
+			for (int i = 0; i < 5; i++) {
+				if (!connection.isConnected()) {
+					Connection(command, ip, port);
+				}else{
+					break;
+				}
+				i++;
 			}
+			
 		} catch (Exception e) {
 			nlogger.logout(e);
 			connection = null;

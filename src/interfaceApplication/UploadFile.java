@@ -62,7 +62,7 @@ public class UploadFile extends HttpServlet {
 		response.setHeader("Content-type", "text/html;charset=UTF-8");
 		String appid = request.getParameter("appid"); // 分表字段
 		fatherid = request.getParameter("folderid");
-		wbid = request.getParameter("wbid");
+//		wbid = request.getParameter("wbid");
 		boolean uploadDone = true;
 		try {
 			String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];

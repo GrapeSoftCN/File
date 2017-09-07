@@ -60,6 +60,7 @@ public class FileConvert extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		response.setCharacterEncoding("UTF-8");
+		request.setCharacterEncoding("UTF-8");
 		String sourceFile = request.getParameter("sourceFile");
 		sourceFile = codec.DecodeHtmlTag(sourceFile);
 		sourceFile = fileUrl.GetTomcatUrl() + sourceFile;
@@ -135,8 +136,14 @@ public class FileConvert extends HttpServlet {
 				outputFile.mkdir();
 			}
 			outputFile = new File(outputFile + "/" + TimeHelper.nowSecond() + ".html");
+//			OpenOfficeConnection connection = model.execOpenOffice();
+//			DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
 			OpenOfficeConnection connection = model.execOpenOffice();
+			if (connection == null) {
+				result = jGrapeFW_Message.netMSG(7, "文件转换失败");
+			}
 			DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
+
 
 			converter.convert(inputFile, outputFile);
 			model.close(connection);
