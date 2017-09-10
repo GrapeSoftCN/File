@@ -1,6 +1,23 @@
 package model;
 
 public class FileImg {
+	public String getImageUri(String imageURL) {
+		int i = 0;
+		if (imageURL.contains("File//upload")) {
+			i = imageURL.toLowerCase().indexOf("file//upload");
+			imageURL = "\\" + imageURL.substring(i);
+		}
+		if (imageURL.contains("File\\upload")) {
+			i = imageURL.toLowerCase().indexOf("file\\upload");
+			imageURL = "\\" + imageURL.substring(i);
+		}
+		if (imageURL.contains("File/upload")) {
+			i = imageURL.toLowerCase().indexOf("file/upload");
+			imageURL = "\\" + imageURL.substring(i);
+		}
+		return imageURL;
+	}
+	
 	public static String getIcon(String extName) {
 		String out = "icon\\";
 		extName = extName.toLowerCase();

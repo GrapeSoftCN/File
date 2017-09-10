@@ -1,59 +1,52 @@
 package model;
 
-import com.artofsolving.jodconverter.openoffice.connection.OpenOfficeConnection;
-import com.artofsolving.jodconverter.openoffice.connection.SocketOpenOfficeConnection;
+
+import org.jodconverter.OfficeDocumentConverter;
+import org.jodconverter.office.DefaultOfficeManagerBuilder;
+import org.jodconverter.office.OfficeException;
+import org.jodconverter.office.OfficeManager;
+
+import com.alibaba.druid.sql.dialect.mysql.ast.MysqlForeignKey.On;
 
 import nlogger.nlogger;
 
 public class FileConvertModel {
-	private GetFileUrl fileUrl = new GetFileUrl();
-	private Process process = null;
-	private OpenOfficeConnection connection = null;
-	private String command = "";
+	private static GetFileUrl fileUrl = new GetFileUrl();
+	private static OfficeManager om;
 
-	/**
-	 * 启动openoffice并连接到openoffice
-	 * 
-	 * @return
-	 */
-	public OpenOfficeConnection execOpenOffice() {
-		String ip = fileUrl.getOpenOffice(0);
+	static{
+//		String ip = fileUrl.getOpenOffice(0);
+		initOffice();
+	}
+	public static void initOffice(){
 		String port = fileUrl.getOpenOffice(1);
-		command = fileUrl.getOpenOfficeUrl() + "\\program\\soffice.exe -headless -accept=\"socket,host=" + ip
-				+ ",port=" + port + ";urp;\"";
-		return Connection(command, ip, port);
+		DefaultOfficeManagerBuilder omConfig = new DefaultOfficeManagerBuilder();
+		omConfig.setOfficeHome(fileUrl.getOpenOfficeUrl());
+		omConfig.setPortNumber( (new Integer(port)).intValue() );
+		omConfig.setTaskExecutionTimeout(1000 * 60 * 10L);//
+		// 设置任务执行超时为5分钟
+		omConfig.setTaskQueueTimeout(1000 * 60 * 60 * 24L);//
+		// 设置任务队列超时为24小时
+		om = omConfig.build();
 	}
-
-	// 连接到openoffice
-	private OpenOfficeConnection Connection(String command, String ip, String port) {
-		try {
-			process = Runtime.getRuntime().exec(command);
-			connection = new SocketOpenOfficeConnection(ip, Integer.parseInt(port));
-			connection.connect();
-			for (int i = 0; i < 5; i++) {
-				if (!connection.isConnected()) {
-					Connection(command, ip, port);
-				}else{
-					break;
+	public void startServ(){
+		if( !om.isRunning() ){
+			try {
+				om.start();
+				Thread.sleep(1000);
+			} catch (OfficeException | InterruptedException e) {
+				nlogger.logout(e);
+				e.printStackTrace();
+				try {
+					om.stop();
+				} catch (OfficeException e1) {
+					;
 				}
-				i++;
 			}
-			
-		} catch (Exception e) {
-			nlogger.logout(e);
-			connection = null;
 		}
-		return connection;
 	}
-
-	/**
-	 * 关闭连接
-	 */
-	public void close(OpenOfficeConnection connection) {
-		if (connection.isConnected()) {
-			connection.disconnect();
-			process.destroy();
-			connection = null;
-		}
+	public OfficeDocumentConverter getConverter(){
+		startServ();
+		return new OfficeDocumentConverter(om);
 	}
 }

@@ -12,6 +12,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,50 +31,71 @@ import org.icepdf.core.exceptions.PDFSecurityException;
 import org.icepdf.core.pobjects.Document;
 import org.icepdf.core.pobjects.Page;
 import org.icepdf.core.util.GraphicsRenderingHints;
-
-import com.artofsolving.jodconverter.DocumentConverter;
-import com.artofsolving.jodconverter.openoffice.connection.OpenOfficeConnection;
-import com.artofsolving.jodconverter.openoffice.converter.OpenOfficeDocumentConverter;
-import com.sun.corba.se.spi.orbutil.fsm.Guard.Result;
+import org.jodconverter.OfficeDocumentConverter;
 
 import JGrapeSystem.jGrapeFW_Message;
 import model.FileConvertModel;
+import model.FileImg;
 import model.GetFileUrl;
+import nlogger.nlogger;
 import security.codec;
 import time.TimeHelper;
 
 @WebServlet("/FileConvert")
 public class FileConvert extends HttpServlet {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private GetFileUrl fileUrl = new GetFileUrl();
 	private FileConvertModel model = new FileConvertModel();
-	private static final long serialVersionUID = 1L;
+	private static AtomicInteger fileNO = new AtomicInteger(0);
 
-	public FileConvert() {
-		super();
+	private String getUnqueue() {
+		return (new Integer(fileNO.incrementAndGet())).toString();
 	}
 
+	/**
+	 * @see HttpServlet#HttpServlet()
+	 */
+	public FileConvert() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+	/**
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse
+	 *      response)
+	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		// TODO Auto-generated method stub
 		doPost(request, response);
 	}
 
+	/**
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse
+	 *      response)
+	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		response.setCharacterEncoding("UTF-8");
 		request.setCharacterEncoding("UTF-8");
+		response.setCharacterEncoding("UTF-8");
+		response.setHeader("Access-Control-Allow-Origin", "*");
+		response.setHeader("Content-type", "text/html;charset=UTF-8");
 		String sourceFile = request.getParameter("sourceFile");
+		int type = Integer.parseInt(request.getParameter("type"));
 		sourceFile = codec.DecodeHtmlTag(sourceFile);
 		sourceFile = fileUrl.GetTomcatUrl() + sourceFile;
-		int type = Integer.parseInt(request.getParameter("type"));
 		switch (type) {
 		case 0: // 转换成pdf
-			response.getWriter().write(office2pdf(sourceFile));
+			response.getWriter().print(office2pdf(sourceFile));
 			break;
 		case 1: // office转换成html
-			response.getWriter().write(office2html(sourceFile));
+			response.getWriter().print(office2html(sourceFile));
 			break;
 		case 2: // office转换成html格式，并获取html文件内容
-			response.getWriter().write(office2htmlString(sourceFile));
+			response.getWriter().print(office2htmlString(sourceFile));
 			break;
 		}
 	}
@@ -103,10 +125,14 @@ public class FileConvert extends HttpServlet {
 			outputFile.mkdir();
 		}
 		outputFile = new File(destFile + "\\" + TimeHelper.nowMillis() + ".pdf");
-		OpenOfficeConnection connection = model.execOpenOffice();
-		DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
-		converter.convert(inputFile, outputFile);
-		model.close(connection);
+		try {
+			OfficeDocumentConverter odc = model.getConverter();
+			odc.convert(inputFile, outputFile);
+		} catch (Exception e) {
+			nlogger.logout(e);
+			return getUTF8StringFromGBKString(jGrapeFW_Message.netMSG(99, "文件转换失败"));
+		}
+
 		return outputFile.toString();
 	}
 
@@ -135,20 +161,23 @@ public class FileConvert extends HttpServlet {
 			if (!outputFile.exists()) {
 				outputFile.mkdir();
 			}
-			outputFile = new File(outputFile + "/" + TimeHelper.nowSecond() + ".html");
-//			OpenOfficeConnection connection = model.execOpenOffice();
-//			DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
-			OpenOfficeConnection connection = model.execOpenOffice();
-			if (connection == null) {
+			outputFile = new File(outputFile + "/" + TimeHelper.nowMillis() + getUnqueue() + ".html");
+			// OpenOfficeConnection connection = model.execOpenOffice();
+			// DocumentConverter converter = new
+			// OpenOfficeDocumentConverter(connection);
+			try {
+				OfficeDocumentConverter odc = model.getConverter();
+				odc.convert(inputFile, outputFile);
+				result = outputFile.toString();
+			} catch (Exception e) {
+				nlogger.logout(e);
 				result = jGrapeFW_Message.netMSG(7, "文件转换失败");
 			}
-			DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
-
-
-			converter.convert(inputFile, outputFile);
-			model.close(connection);
-			result = outputFile.toString();
 		} catch (Exception e) {
+			nlogger.logout(e);
+			if (outputFile.exists()) {
+				outputFile.delete();
+			}
 			result = jGrapeFW_Message.netMSG(6, "不支持当前格式");
 		}
 		return result;
@@ -184,7 +213,7 @@ public class FileConvert extends HttpServlet {
 			ImageOutputStream outImage = ImageIO.createImageOutputStream(out);
 			writer.setOutput(outImage);
 			writer.write(new IIOImage(img, null, null));
-			list.add(getImageUri(outFile.toString()));
+			list.add(new FileImg().getImageUri(outFile.toString()));
 		}
 		img.flush();
 		document.dispose();
@@ -205,6 +234,7 @@ public class FileConvert extends HttpServlet {
 	 *         备注：同时删除临时文件
 	 */
 	public String office2htmlString(String sourceFile) {
+		System.out.println("转换文件地址: " + sourceFile);
 		String result = "";
 		String ffilepath = office2html(sourceFile);
 		if (ffilepath.contains("errorcode")) {
@@ -213,20 +243,32 @@ public class FileConvert extends HttpServlet {
 		File htmlFile = new File(ffilepath);
 		// 获取html文件流
 		StringBuffer html = new StringBuffer();
+		BufferedReader br = null;
+		;
 		try {
-			BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(htmlFile), "gb2312"));
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(htmlFile), "gb2312"));
 			while (br.ready()) {
 				html.append(br.readLine());
 			}
 			br.close();
-			// 删除临时文件
-			htmlFile.delete();
 		} catch (FileNotFoundException e) {
 			result = "文件不存在";
 			e.printStackTrace();
 		} catch (IOException e) {
 			result = "当前格式不支持";
 			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			if (htmlFile.exists()) {
+				htmlFile.delete();
+			}
 		}
 		String string = html.toString();
 		result = clearFormat(string);
@@ -236,6 +278,7 @@ public class FileConvert extends HttpServlet {
 	private String clearFormat(String htmlStr) {
 		String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
 		String filepath = "http://" + fileUrl.GetTomcatWebUrl() + "/File/upload/" + Date; // html中包含图片的地址
+		nlogger.logout("图片地址： " + filepath);
 		// 获取body内容的正则
 		String bodyReg = "<BODY .*</BODY>";
 		Pattern bodyPattern = Pattern.compile(bodyReg);
@@ -245,6 +288,7 @@ public class FileConvert extends HttpServlet {
 			htmlStr = bodyMatcher.group().replaceFirst("<BODY", "<DIV").replaceAll("</BODY>", "</DIV>");
 		}
 		// 调整图片地址
+		htmlStr = htmlStr.replaceAll("<img src=\"", "<img src=\"" + filepath + "/");
 		htmlStr = htmlStr.replaceAll("<IMG SRC=\"", "<IMG SRC=\"" + filepath + "/");
 		// 把<P></P>转换成</div></div>保留样式
 		htmlStr = htmlStr.replaceAll("(<P)([^>]*>.*?)(<\\/P>)", "<div$2</div>");
@@ -253,10 +297,11 @@ public class FileConvert extends HttpServlet {
 		htmlStr = htmlStr.replaceAll(
 				"<[/]?(font|FONT|span|SPAN|xml|XML|del|DEL|ins|INS|meta|META|[ovwxpOVWXP]:\\w+)[^>]*?>", "");
 		// 删除不需要的属性
-		htmlStr = htmlStr.replaceAll(
-				"<([^>]*)(?:lang|LANG|class|CLASS|style|STYLE|size|SIZE|face|FACE|[ovwxpOVWXP]:\\w+)=(?:'[^']*'|\"\"[^\"\"]*\"\"|[^>]+)([^>]*)>",
-				"<$1$2>");
-
+		/*
+		 * htmlStr = htmlStr.replaceAll(
+		 * "<([^>]*)(?:lang|LANG|class|CLASS|style|STYLE|size|SIZE|face|FACE|[ovwxpOVWXP]:\\w+)=(?:'[^']*'|\"\"[^\"\"]*\"\"|[^>]+)([^>]*)>",
+		 * "<$1$2>");
+		 */
 		return htmlStr;
 	}
 
@@ -288,22 +333,5 @@ public class FileConvert extends HttpServlet {
 			return tmp;
 		}
 		return utfBytes;
-	}
-
-	private String getImageUri(String imageURL) {
-		int i = 0;
-		if (imageURL.contains("File//upload")) {
-			i = imageURL.toLowerCase().indexOf("file//upload");
-			imageURL = "\\" + imageURL.substring(i);
-		}
-		if (imageURL.contains("File\\upload")) {
-			i = imageURL.toLowerCase().indexOf("file\\upload");
-			imageURL = "\\" + imageURL.substring(i);
-		}
-		if (imageURL.contains("File/upload")) {
-			i = imageURL.toLowerCase().indexOf("file/upload");
-			imageURL = "\\" + imageURL.substring(i);
-		}
-		return imageURL;
 	}
 }

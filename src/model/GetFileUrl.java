@@ -112,7 +112,6 @@ public class GetFileUrl {
 	public String GetTempPath() {
 		return getConfig("temppath");
 	}
-
 	/**
 	 * 视频截图工具安装地址
 	 * 
