@@ -51,6 +51,18 @@ public class UploadFile extends HttpServlet {
 		super();
 	}
 
+	private void initData() {
+		path = "";
+		newName = "";
+		fileName = ""; // 文件名称
+		fatherid = "0"; // 所属文件夹id
+		MD5 = ""; // MD5码
+		ExtName = ""; // 扩展名
+		ThumbailsPath = "";
+		tempPath = fileUrl.GetTempPath();
+		wbid = "";
+	}
+
 	private String getUnqueue() {
 		return (new Integer(fileNO.incrementAndGet())).toString();
 	}
@@ -68,7 +80,8 @@ public class UploadFile extends HttpServlet {
 		response.setHeader("Content-type", "text/html;charset=UTF-8");
 		String appid = request.getParameter("appid"); // 分表字段
 		fatherid = request.getParameter("folderid");
-		 wbid = request.getParameter("wbid");
+		wbid = request.getParameter("wbid");
+		initData();
 		boolean uploadDone = true;
 		try {
 			String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
@@ -76,9 +89,10 @@ public class UploadFile extends HttpServlet {
 			if (isMultipart) {
 				FileItemFactory factory = new DiskFileItemFactory();
 				// path = fileUrl
-				//设置上传图片存放的地址
-				path = fileUrl.GetTomcatUrl()+"/File/upload/"+Date;
-//				path = this.getServletContext().getRealPath("/upload/" + Date);
+				// 设置上传图片存放的地址
+				path = fileUrl.GetTomcatUrl() + "/File/upload/" + Date;
+				// path = this.getServletContext().getRealPath("/upload/" +
+				// Date);
 				File fiel = new File(path);
 				if (!fiel.exists()) {
 					fiel.mkdir();

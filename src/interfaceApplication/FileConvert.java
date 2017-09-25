@@ -272,13 +272,13 @@ public class FileConvert extends HttpServlet {
 		}
 		String string = html.toString();
 		result = clearFormat(string);
+		// result = string;
 		return result;
 	}
 
 	private String clearFormat(String htmlStr) {
 		String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
 		String filepath = "http://" + fileUrl.GetTomcatWebUrl() + "/File/upload/" + Date; // html中包含图片的地址
-		nlogger.logout("图片地址： " + filepath);
 		// 获取body内容的正则
 		String bodyReg = "<BODY .*</BODY>";
 		Pattern bodyPattern = Pattern.compile(bodyReg);
@@ -297,11 +297,10 @@ public class FileConvert extends HttpServlet {
 		htmlStr = htmlStr.replaceAll(
 				"<[/]?(font|FONT|span|SPAN|xml|XML|del|DEL|ins|INS|meta|META|[ovwxpOVWXP]:\\w+)[^>]*?>", "");
 		// 删除不需要的属性
-		/*
-		 * htmlStr = htmlStr.replaceAll(
-		 * "<([^>]*)(?:lang|LANG|class|CLASS|style|STYLE|size|SIZE|face|FACE|[ovwxpOVWXP]:\\w+)=(?:'[^']*'|\"\"[^\"\"]*\"\"|[^>]+)([^>]*)>",
-		 * "<$1$2>");
-		 */
+
+//		htmlStr = htmlStr.replaceAll(
+//				"<([^>]*)(?:lang|LANG|class|CLASS|style|STYLE|size|SIZE|face|FACE|[ovwxpOVWXP]:\\w+)=(?:'[^']*'|\"\"[^\"\"]*\"\"|[^>]+)([^>]*)>",
+//				"<$1$2>");
 		return htmlStr;
 	}
 

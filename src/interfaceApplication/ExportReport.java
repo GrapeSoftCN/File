@@ -1,6 +1,8 @@
 package interfaceApplication;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -8,6 +10,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import file.fileHelper;
+import model.GetFileUrl;
 import nlogger.nlogger;
 import offices.excelHelper;
 import time.TimeHelper;
@@ -17,12 +21,16 @@ import time.TimeHelper;
  */
 @WebServlet("/ExportReport")
 public class ExportReport extends HttpServlet {
+	private static AtomicInteger fileNO = new AtomicInteger(0);
+	private GetFileUrl fileUrl = new GetFileUrl();
 	private static final long serialVersionUID = 1L;
 
 	public ExportReport() {
 		super();
 	}
-
+	private String getUnqueue() {
+		return (new Integer(fileNO.incrementAndGet())).toString();
+	}
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		doPost(request, response);
@@ -38,20 +46,18 @@ public class ExportReport extends HttpServlet {
 	private String print(String info) {
 		String path = "";
 		String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
-//		String uuid = UUID.randomUUID().toString().replace("-", "");
 		try {
-			String fileurl = "C:\\JavaCode\\tomcat\\webapps\\File\\upload\\" + Date + "\\Excel";
-			// byte[] by = excelHelper.out(info);
-			// if (by != null) {
-			// path = fileurl + "\\" + uuid + ".xls";
-			// if (fileHelper.createFileEx(path)) {
-			// FileOutputStream fos = new FileOutputStream(path);
-			// fos.write(by);
-			// fos.close();
-			// }
-			// }
-			byte[] file = excelHelper.out(info);
-			path = fileurl + file.toString();
+			String fileurl = fileUrl.GetTomcatUrl() + "/File/upload/" + Date + "\\Excel";
+//			byte[] by = excelHelper.out(info);
+			byte[] by = info.getBytes();
+			if (by != null) {
+				path = fileurl + "\\" + TimeHelper.nowMillis() + getUnqueue() + ".xls";
+				if (fileHelper.createFileEx(path)) {
+					FileOutputStream fos = new FileOutputStream(path);
+					fos.write(by);
+					fos.close();
+				}
+			}
 		} catch (Exception e) {
 			nlogger.logout(e);
 		}
