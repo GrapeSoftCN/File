@@ -6,8 +6,6 @@ import org.jodconverter.office.DefaultOfficeManagerBuilder;
 import org.jodconverter.office.OfficeException;
 import org.jodconverter.office.OfficeManager;
 
-import com.alibaba.druid.sql.dialect.mysql.ast.MysqlForeignKey.On;
-
 import nlogger.nlogger;
 
 public class FileConvertModel {

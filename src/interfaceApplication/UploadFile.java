@@ -3,9 +3,10 @@ package interfaceApplication;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.ServletException;
@@ -23,16 +24,19 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.json.simple.JSONObject;
 
+import JGrapeSystem.jGrapeFW_Message;
 import file.fileHelper;
 import model.FileImg;
 import model.GetFileUrl;
 import model.OpFile;
+import net.bytebuddy.instrumentation.method.bytecode.ByteCodeAppender.Size;
 import net.coobird.thumbnailator.Thumbnails;
 import nlogger.nlogger;
 import time.TimeHelper;
 
 @WebServlet(name = "UploadFile", urlPatterns = { "/UploadFile" })
 public class UploadFile extends HttpServlet {
+	private FileImg img = new FileImg();
 	private GetFileUrl fileUrl = new GetFileUrl();
 	private static final long serialVersionUID = 1L;
 	private OpFile files = new OpFile();
@@ -44,7 +48,6 @@ public class UploadFile extends HttpServlet {
 	private String ExtName = ""; // 扩展名
 	private String ThumbailsPath = "";
 	private String tempPath = fileUrl.GetTempPath();
-	private String wbid = "";
 	private static AtomicInteger fileNO = new AtomicInteger(0);
 
 	public UploadFile() {
@@ -60,32 +63,32 @@ public class UploadFile extends HttpServlet {
 		ExtName = ""; // 扩展名
 		ThumbailsPath = "";
 		tempPath = fileUrl.GetTempPath();
-		wbid = "";
 	}
 
 	private String getUnqueue() {
 		return (new Integer(fileNO.incrementAndGet())).toString();
 	}
 
-	protected void doGet(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		doPost(request, response);
 	}
 
-	protected void doPost(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
 		response.setCharacterEncoding("UTF-8");
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		response.setHeader("Content-type", "text/html;charset=UTF-8");
 		String appid = request.getParameter("appid"); // 分表字段
 		fatherid = request.getParameter("folderid");
-		wbid = request.getParameter("wbid");
+		String wbid = request.getParameter("wbid");
+		String userid = request.getParameter("userid"); // 当前用户id
 		initData();
 		boolean uploadDone = true;
 		try {
+			System.out.println("上传文件");
 			String Date = TimeHelper.stampToDate(TimeHelper.nowMillis()).split(" ")[0];
 			boolean isMultipart = ServletFileUpload.isMultipartContent(request);
+			System.out.println("temp1: " + isMultipart);
 			if (isMultipart) {
 				FileItemFactory factory = new DiskFileItemFactory();
 				// path = fileUrl
@@ -112,23 +115,26 @@ public class UploadFile extends HttpServlet {
 				FileItem tempFileItem = null;
 				if (fileItems != null && fileItems.size() > 0) {
 					for (FileItem fileItem : fileItems) {
-						if (fileItem.getFieldName().equals("id")) {
-							id = fileItem.getString();
-						} else if (fileItem.getFieldName().equals("name")) {
-							fileName = new String(fileItem.getString().getBytes("ISO-8859-1"), "UTF-8");
-						} else if (fileItem.getFieldName().equals("chunks")) {
-							chunks = NumberUtils.toInt(fileItem.getString());
-						} else if (fileItem.getFieldName().equals("chunk")) {
-							chunk = NumberUtils.toInt(fileItem.getString());
-						} else if (fileItem.getFieldName().equals("file")) {
-							tempFileItem = fileItem;
-						}
-						filesize += fileItem.getSize();
-						if (fileName == null || fileName.equals("")) {
-							fileName = fileItem.getName();
+						if (!fileItem.isFormField()) {
+							if (fileItem.getFieldName().equals("id")) {
+								id = fileItem.getString();
+							} else if (fileItem.getFieldName().equals("name")) {
+								fileName = new String(fileItem.getString().getBytes("ISO-8859-1"), "UTF-8");
+							} else if (fileItem.getFieldName().equals("chunks")) {
+								chunks = NumberUtils.toInt(fileItem.getString());
+							} else if (fileItem.getFieldName().equals("chunk")) {
+								chunk = NumberUtils.toInt(fileItem.getString());
+							} else if (fileItem.getFieldName().equals("file")) {
+								tempFileItem = fileItem;
+							}
+							filesize += fileItem.getSize();
+							if (fileName == null || fileName.equals("")) {
+								fileName = fileItem.getName();
+							}
 						}
 					}
 				}
+				System.out.println("文件名称: " + fileName + ",文件大小： " + filesize);
 				String tempFileDir = getTempFilePath(tempPath) + File.separator + id;
 				File parentFileDir = new File(tempFileDir);
 				if (!parentFileDir.exists()) {
@@ -156,8 +162,7 @@ public class UploadFile extends HttpServlet {
 							FileUtils.copyFile(partFile, destTempfos);
 							destTempfos.close();
 						}
-						// FileUtils.deleteDirectory(parentFileDir);
-						String mString = getJson(appid, fileName, String.valueOf(filesize), fatherid);
+						String mString = getJson(appid, fileName, String.valueOf(filesize), fatherid, wbid, userid);
 						if (mString != null && !mString.equals("")) {
 							response.getWriter().print(mString);
 						}
@@ -172,7 +177,6 @@ public class UploadFile extends HttpServlet {
 		} catch (Exception e) {
 			response.getWriter().print("文件上传失败");
 		}
-		System.out.println("上传文件路径 ： " + path);
 	}
 
 	private String getTempFilePath(String tempath) {
@@ -195,12 +199,11 @@ public class UploadFile extends HttpServlet {
 	}
 
 	@SuppressWarnings("unchecked")
-	private String getJson(String appid, String filename, String filesize, String fatherid) throws Exception {
+	private String getJson(String appid, String filename, String filesize, String fatherid, String wbid, String userid) throws Exception {
 		MD5 = DigestUtils.md5Hex(path + "\\" + filename);
 		ExtName = ext(filename);
 		int filetype = GetFileType(ExtName);
-		nlogger.logout(path);
-		String filepath = new FileImg().getImageUri(path) + "\\" + newName;
+		String filepath = img.getImageUri(path) + "\\" + newName;
 		JSONObject object = new JSONObject();
 		object.put("fileoldname", filename);
 		object.put("filenewname", newName);
@@ -215,6 +218,7 @@ public class UploadFile extends HttpServlet {
 		object.put("pptImage", pptConvertImage(ExtName, filepath));
 		object.put("time", TimeHelper.nowMillis());
 		object.put("wbid", wbid);
+		object.put("userid", userid);
 		String string = files.insert(appid, object);
 		if (string != null && !("").equals(string)) {
 			return string;
@@ -257,6 +261,7 @@ public class UploadFile extends HttpServlet {
 		case "mp4":
 		case "wmv":
 		case "mov":
+		case "flv":
 			type = 2;
 			break;
 		// 文档
@@ -351,7 +356,23 @@ public class UploadFile extends HttpServlet {
 		try {
 			ProcessBuilder builder = new ProcessBuilder();
 			builder.command(commend);
-			builder.start();
+			builder.redirectErrorStream(true);
+			System.out.println("视频截图开始...");
+			Process process = builder.start();
+			InputStream in = process.getInputStream();
+			byte[] re = new byte[1024];
+			System.out.print("正在进行截图，请稍候");
+			if (in.read(re) == -1) {
+				System.out.println("视频截图失败");
+				return "";
+			}
+			while (in.read(re) != -1) {
+				System.out.print(".");
+			}
+			System.out.println("");
+			in.close();
+			System.out.println("视频截图完成...");
+			System.out.println("缩略图地址： " + outpath);
 		} catch (Exception e) {
 			nlogger.logout(e);
 			outpath = "";
@@ -379,8 +400,7 @@ public class UploadFile extends HttpServlet {
 				Thumbnails.of(fileUrl.GetTomcatUrl() + inputpath).scale(fileUrl.getScale())
 						// .forceSize(Integer.parseInt(GetFileUrl.getImgSize(0)),
 						// Integer.parseInt(GetFileUrl.getImgSize(1)))
-						.outputFormat(fileUrl.getImgType()).outputQuality(Float.parseFloat(fileUrl.getImgQuality()))
-						.toFile(outpath);
+						.outputFormat(fileUrl.getImgType()).outputQuality(Float.parseFloat(fileUrl.getImgQuality())).toFile(outpath);
 			}
 			// FileUtils.deleteDirectory(new File(tempPath));
 		} catch (Exception e) {
@@ -388,6 +408,41 @@ public class UploadFile extends HttpServlet {
 			outpath = "";
 		}
 		return outpath;
+	}
+
+	/**
+	 * 视频文件进行转换
+	 * 
+	 * @project File
+	 * @package interfaceApplication
+	 * @file UploadFile.java
+	 * 
+	 * @param fileInfo
+	 *
+	 */
+	@SuppressWarnings("unchecked")
+	private String Convert(String fileInfo, String appid) {
+		String message = jGrapeFW_Message.netMSG(0, fileInfo);
+		;
+		JSONObject obj = new JSONObject();
+		JSONObject object = JSONObject.toJSON(fileInfo);
+		int filetype = Integer.parseInt(object.getString("filetype"));
+		if (filetype == 2) {
+			message = jGrapeFW_Message.netMSG(99, "文件转换失败");
+			String fileID = ((JSONObject) object.get("_id")).getString("$oid");
+			String filepath = object.getString("filepath");
+			String filenewnme = object.getString("filenewname");
+			filepath = new ConvertVideo().ConvertMP4(filepath);
+			obj.put("fileextname", "mp4");
+			obj.put("filenewname", filenewnme.substring(0, filenewnme.indexOf(".")).toLowerCase() + ".mp4");
+			JSONObject temp = JSONObject.toJSON(filepath);
+			if (temp.getLong("errorcode") == 0) {
+				// 更新文件信息
+				obj.put("filepath", img.getImageUri(temp.getString("message")));
+				message = files.update(appid, fileID, obj);
+			}
+		}
+		return message;
 	}
 
 }

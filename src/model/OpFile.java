@@ -9,8 +9,6 @@ import org.json.simple.JSONObject;
 import JGrapeSystem.jGrapeFW_Message;
 import database.DBHelper;
 import nlogger.nlogger;
-import rpc.execRequest;
-import session.session;
 import string.StringHelper;
 
 public class OpFile {
@@ -47,16 +45,18 @@ public class OpFile {
 		String[] value = null;
 		List<String> list = new ArrayList<String>();
 		JSONObject object = file.bind(appid).eq("_id", new ObjectId(fid)).find();
-		if (object.containsKey("pptImage")) {
-			image = object.getString("pptImage");
-			if (!image.equals("")) {
-				value = image.split(",");
-				for (String string : value) {
-					string = "http://" + new GetFileUrl().GetTomcatWebUrl() + string;
-					list.add(string);
+		if (object != null && object.size() > 0) {
+			if (object.containsKey("pptImage")) {
+				image = object.getString("pptImage");
+				if (!image.equals("")) {
+					value = image.split(",");
+					for (String string : value) {
+						string = "http://" + new GetFileUrl().GetTomcatWebUrl() + string;
+						list.add(string);
+					}
 				}
+				object.put("pptImage", StringHelper.join(list));
 			}
-			object.put("pptImage", StringHelper.join(list));
 		}
 		return object;
 	}
@@ -71,6 +71,32 @@ public class OpFile {
 			object = null;
 		}
 		return object;
+	}
+
+	/**
+	 * 更新文件信息
+	 * 
+	 * @project File
+	 * @package model
+	 * @file OpFile.java
+	 * 
+	 * @param appid
+	 * @param fid
+	 * @param newInfo
+	 * @return
+	 *
+	 */
+	public String update(String appid, String fid, JSONObject newInfo) {
+		String message = jGrapeFW_Message.netMSG(99, "文件信息更新失败");
+		JSONObject FileInfo = new JSONObject();
+		if (newInfo != null && newInfo.size() != 0) {
+			Object obj = file.bind(appid).eq("_id", fid).data(newInfo).update();
+			if (obj != null) {
+				FileInfo = find(appid, fid);
+				message = jGrapeFW_Message.netMSG(0, FileInfo);
+			}
+		}
+		return message;
 	}
 
 	// 只针对于文件转换

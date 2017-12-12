@@ -3,15 +3,15 @@ package model;
 public class FileImg {
 	public String getImageUri(String imageURL) {
 		int i = 0;
-		if (imageURL.contains("File//upload")) {
+		if (imageURL.contains("File//upload") || imageURL.contains("file//upload")) {
 			i = imageURL.toLowerCase().indexOf("file//upload");
 			imageURL = "\\" + imageURL.substring(i);
 		}
-		if (imageURL.contains("File\\upload")) {
+		if (imageURL.contains("File\\upload") || imageURL.contains("file\\upload")) {
 			i = imageURL.toLowerCase().indexOf("file\\upload");
 			imageURL = "\\" + imageURL.substring(i);
 		}
-		if (imageURL.contains("File/upload")) {
+		if (imageURL.contains("File/upload") || imageURL.contains("file/upload") ) {
 			i = imageURL.toLowerCase().indexOf("file/upload");
 			imageURL = "\\" + imageURL.substring(i);
 		}
